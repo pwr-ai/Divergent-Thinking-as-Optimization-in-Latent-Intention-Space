@@ -9,6 +9,9 @@ torch>=2.0
 numpy>=1.24
 transformers>=4.40
 
+# xRAG: Extreme Context Compression for RAG
+git+https://github.com/Hannibal046/xRAG.git@main
+
 # LLM serving & inference
 vllm>=0.4
 litellm>=1.30
