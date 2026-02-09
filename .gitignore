@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+*.egg
+dist/
+build/
+
+# Virtual environment
+.venv/
+venv/
+env/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Logs and run data (large, generated)
+logs/
+dataset_runs/
+bootstrap_runs/
+csc_runs/
+
+# Cache
+.cache/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Copies / backups
+*copy*.py
+*.bak
+*.orig
