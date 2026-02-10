@@ -98,6 +98,12 @@ PODMAN_SOCKET="/run/user/$(id -u)/podman/podman.sock"
 setup_docker_socket() {
     echo "=== Setting up Docker/Podman socket ==="
     
+    # If DOCKER_HOST already set (e.g. remote Docker via SSH tunnel: tcp://127.0.0.1:2375), use it
+    if [ -n "${DOCKER_HOST:-}" ]; then
+        echo "Using existing DOCKER_HOST: $DOCKER_HOST"
+        return 0
+    fi
+    
     # Check if docker socket exists
     if [ -S "/var/run/docker.sock" ]; then
         export DOCKER_HOST="unix:///var/run/docker.sock"
