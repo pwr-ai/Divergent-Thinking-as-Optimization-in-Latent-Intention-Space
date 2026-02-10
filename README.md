@@ -91,6 +91,10 @@ python cma_loop.py \
 - **lite**: SWE-bench Lite (300 instances). Default instance: `sqlfluff__sqlfluff-1625`. Use `--subset lite` or `SUBSET=lite`.
 - **verified**: Same dataset as bash_only; alias `bash_only` is for clarity. Instance IDs differ between Lite and Verified.
 
+## Environment (Docker vs Apptainer/Singularity)
+- **Default**: `--environment_class docker` (or set `ENVIRONMENT_CLASS=docker` in the pipeline scripts).
+- **Apptainer/Singularity** (e.g. on HPC): use `--environment_class apptainer` or `--environment_class singularity`. The code maps `apptainer` to mini-swe-agent’s `singularity` backend. If your binary is `apptainer`, set `MSWEA_SINGULARITY_EXECUTABLE=apptainer` before running. The **evaluation** of patches (SWE-bench harness) still uses Docker/Podman in this repo; only the **agent execution** runs in Singularity/Apptainer.
+
 ## Notes
 - The mini runner mirrors the `mini-extra swebench-single` pattern: it loads the SWE-bench instance, creates the sandbox environment,
   and runs the InteractiveAgent on an injected task that prepends a "HIGH-PRIORITY FIX INTENTION". The returned string from `agent.run(...)`

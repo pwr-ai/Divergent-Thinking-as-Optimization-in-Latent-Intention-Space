@@ -131,7 +131,7 @@ def main():
     ap.add_argument("--instance_id", required=True)
     ap.add_argument("--mini_model", required=True)
     ap.add_argument("--mini_config", default=str(Path(__file__).parent / "csc_swe_loop" / "swebench_minimal.yaml"))
-    ap.add_argument("--environment_class", default="docker")
+    ap.add_argument("--environment_class", default="docker", help="docker, singularity, or apptainer (set MSWEA_SINGULARITY_EXECUTABLE=apptainer if needed)")
     ap.add_argument("--dataset_name", default=None, help="harness dataset (default: from subset)")
     ap.add_argument("--out", default="bootstrap_runs")
     ap.add_argument("--k_after", type=int, default=8, help="popsize after bootstrap")

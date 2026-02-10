@@ -36,7 +36,9 @@ def run_mini_on_instance(
     config = yaml.safe_load(config_path.read_text())
 
     if environment_class is not None:
-        config.setdefault("environment", {})["environment_class"] = environment_class
+        # mini-swe-agent uses "singularity" for Singularity/Apptainer; accept "apptainer" as alias
+        ec = "singularity" if environment_class.strip().lower() == "apptainer" else environment_class
+        config.setdefault("environment", {})["environment_class"] = ec
     if max_steps is not None and max_steps > 0:
         config.setdefault("agent", {})["step_limit"] = max_steps
 

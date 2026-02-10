@@ -404,7 +404,7 @@ run_dataset() {
         --dataset_name "$DATASET_NAME" \
         --mini_config "$MINI_CONFIG" \
         --mini_model "$MINI_MODEL" \
-        --environment_class docker \
+        --environment_class "${ENVIRONMENT_CLASS:-docker}" \
         --rounds "$ROUNDS" \
         --k "$K" \
         --k_after "$K" \
@@ -467,6 +467,9 @@ Environment variables (can be set before running):
   STAGNATION_THRESHOLD - Iterations without improvement before kick (default: 10)
   KICK_PROBABILITY     - Base probability of kick move (default: 0.15)
 
+  Environment (agent execution):
+  ENVIRONMENT_CLASS    - docker (default), singularity, or apptainer (HPC; set MSWEA_SINGULARITY_EXECUTABLE=apptainer if needed)
+
 Examples:
   # Run single instance with defaults
   ./run_pipeline_tabu.sh
@@ -482,6 +485,9 @@ Examples:
 
   # Conservative Tabu Search (shorter tenure, smaller moves)
   TABU_TENURE=20 SIGMA_LOCAL=0.3 ./run_pipeline_tabu.sh
+
+  # Use Apptainer/Singularity instead of Docker (e.g. on HPC)
+  ENVIRONMENT_CLASS=apptainer ./run_pipeline_tabu.sh
 
 EOF
 }

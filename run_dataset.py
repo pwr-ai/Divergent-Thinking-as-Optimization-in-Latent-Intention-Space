@@ -593,7 +593,11 @@ def main():
     ap.add_argument("--dataset_name", default=None, help="SWE-bench harness dataset (default: from subset, e.g. Verified for bash_only)")
     ap.add_argument("--mini_model", required=True)
     ap.add_argument("--mini_config", default=str(Path(__file__).parent / "csc_swe_loop" / "swebench_minimal.yaml"))
-    ap.add_argument("--environment_class", default="docker")
+    ap.add_argument(
+        "--environment_class",
+        default="docker",
+        help="Execution environment: docker (default), singularity, or apptainer. For HPC use apptainer/singularity; set MSWEA_SINGULARITY_EXECUTABLE=apptainer if needed.",
+    )
     ap.add_argument("--rounds", type=int, default=6)
     ap.add_argument("--k", type=int, default=8)
     ap.add_argument("--k_after", type=int, default=8, help="popsize in CSC after bootstrap")
