@@ -420,6 +420,7 @@ run_dataset() {
         --sigma_kick "$SIGMA_KICK" \
         --stagnation_threshold "$STAGNATION_THRESHOLD" \
         --kick_probability "$KICK_PROBABILITY" \
+        --eval_backend "${EVAL_BACKEND:-docker}" \
         2>&1 | tee "$DATASET_LOG"
     
     local dataset_exit=${PIPESTATUS[0]}
@@ -467,8 +468,9 @@ Environment variables (can be set before running):
   STAGNATION_THRESHOLD - Iterations without improvement before kick (default: 10)
   KICK_PROBABILITY     - Base probability of kick move (default: 0.15)
 
-  Environment (agent execution):
-  ENVIRONMENT_CLASS    - docker (default), singularity, or apptainer (HPC; set MSWEA_SINGULARITY_EXECUTABLE=apptainer if needed)
+  Environment:
+  ENVIRONMENT_CLASS    - Agent execution: docker (default), singularity, or apptainer (HPC; set MSWEA_SINGULARITY_EXECUTABLE=apptainer if needed)
+  EVAL_BACKEND         - Patch evaluation: docker (default, local Docker/Podman) or modal (Modal cloud, no local Docker needed; run 'modal token new' first)
 
 Examples:
   # Run single instance with defaults
@@ -487,7 +489,10 @@ Examples:
   TABU_TENURE=20 SIGMA_LOCAL=0.3 ./run_pipeline_tabu.sh
 
   # Use Apptainer/Singularity instead of Docker (e.g. on HPC)
-  ENVIRONMENT_CLASS=apptainer ./run_pipeline_tabu.sh
+  ENVIRONMENT_CLASS=apptainer EVAL_BACKEND=modal ./run_pipeline_tabu.sh
+
+  # Use Modal for evaluation only (agent still uses Docker)
+  EVAL_BACKEND=modal ./run_pipeline_tabu.sh
 
 EOF
 }
@@ -535,10 +540,14 @@ main() {
     echo "  CSC quantization: $CSC_QUANTIZATION"
     echo ""
     
-    # Setup Docker/Podman socket first (needed for SWE-bench harness)
-    if ! setup_docker_socket; then
-        echo "Failed to setup Docker/Podman socket. Exiting."
-        exit 1
+    # Setup Docker/Podman socket (needed for SWE-bench harness when using docker eval backend)
+    if [ "${EVAL_BACKEND:-docker}" = "docker" ]; then
+        if ! setup_docker_socket; then
+            echo "Failed to setup Docker/Podman socket. Exiting."
+            exit 1
+        fi
+    else
+        echo "Eval backend: ${EVAL_BACKEND} (skipping Docker/Podman socket setup)"
     fi
     
     # Start servers

@@ -116,11 +116,13 @@ def safe_eval_patch(
     eval_dir: Path,
     run_id: str,
     split: str = "test",
+    eval_backend: str = "docker",
 ) -> Tuple[float, Dict[str, Any]]:
     """
     Evaluate patch with SWE-bench harness; return (score, info).
     Fail-closed: if anything goes wrong, return score=0 with reason.
     split: effective split for harness (e.g. "test" for Verified, "dev" for Lite).
+    eval_backend: "docker" (local Docker/Podman) or "modal" (Modal cloud).
     """
     if not patch or not patch.strip():
         return 0.0, {"resolved": False, "f2p": 0.0, "p2p": 0.0, "note": "empty_patch"}
@@ -132,6 +134,7 @@ def safe_eval_patch(
             out_dir=eval_dir,
             run_id=run_id,
             split=split,
+            eval_backend=eval_backend,
         )
         inst_res = extract_instance_result(results, instance_id)
         if inst_res is None:
@@ -198,6 +201,7 @@ def bootstrap_instance(
     sigma_kick: float = 3.0,
     stagnation_threshold: int = 10,
     kick_probability: float = 0.15,
+    eval_backend: str = "docker",
 ) -> Dict[str, Any]:
     """
     1) Run N attempts WITHOUT intention (direct problem solving with varying temps)
@@ -261,6 +265,7 @@ def bootstrap_instance(
                     eval_dir=eval_dir,
                     run_id=run_id,
                     split=harness_split,
+                    eval_backend=eval_backend,
                 )
             else:
                 score, info = 0.0, {"resolved": False, "f2p": 0.0, "p2p": 0.0, "note": "empty_patch"}
@@ -446,6 +451,7 @@ def cma_loop_instance(
     k: int,
     use_cache: bool,
     max_steps: Optional[int] = 100,
+    eval_backend: str = "docker",
 ) -> Dict[str, Any]:
     """
     Run CMA iterations for one instance. Returns best metrics and whether solved.
@@ -521,6 +527,7 @@ def cma_loop_instance(
                     eval_dir=eval_dir,
                     run_id=run_id,
                     split=harness_split,
+                    eval_backend=eval_backend,
                 )
 
             total_evals += 1
@@ -618,6 +625,9 @@ def main():
     ap.add_argument("--sigma_kick", type=float, default=3.0, help="std for kick/diversification moves (default: 3.0)")
     ap.add_argument("--stagnation_threshold", type=int, default=10, help="iterations without improvement before kick (default: 10)")
     ap.add_argument("--kick_probability", type=float, default=0.15, help="base probability of kick move (default: 0.15)")
+    # Evaluation backend
+    ap.add_argument("--eval_backend", default="docker", choices=["docker", "modal"],
+                    help="Evaluation backend: docker (local Docker/Podman) or modal (Modal cloud, no Docker needed). Run 'modal token new' first for modal.")
     args = ap.parse_args()
     dataset_name = args.dataset_name or get_harness_dataset_name(args.subset)
     # Harness needs effective split (Verified has only "test", not "dev")
@@ -689,6 +699,7 @@ def main():
                 sigma_kick=args.sigma_kick,
                 stagnation_threshold=args.stagnation_threshold,
                 kick_probability=args.kick_probability,
+                eval_backend=args.eval_backend,
             )
             status["bootstrap"] = boot
 
@@ -714,6 +725,7 @@ def main():
                     k=args.k,
                     use_cache=args.cache,
                     max_steps=args.max_steps,
+                    eval_backend=args.eval_backend,
                 )
                 status["loop"] = loop
                 status["solved"] = bool(loop.get("solved"))

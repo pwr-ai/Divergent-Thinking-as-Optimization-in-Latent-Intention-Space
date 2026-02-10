@@ -22,7 +22,9 @@ mini-swe-agent>=1.10
 datasets>=2.18
 
 # Evaluation / containerization
-docker>=7.0
+docker>=7.0            # local eval backend (Docker/Podman)
+modal>=0.60            # cloud eval backend (Modal) — optional, for --eval_backend modal
+tenacity>=8.0          # retry logic for Modal sandboxes
 
 # Utilities
 pyyaml>=6.0

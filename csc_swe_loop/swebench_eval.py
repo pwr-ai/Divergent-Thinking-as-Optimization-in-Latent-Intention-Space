@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -11,6 +12,8 @@ from swebench.harness.run_evaluation import (
     LOG_REPORT,
     RUN_EVALUATION_LOG_DIR,
 )
+from swebench.harness.modal_eval import run_instances_modal, validate_modal_credentials
+from swebench.harness.utils import load_swebench_dataset
 
 
 def _filter_new_files_from_patch(patch: str) -> str:
@@ -96,35 +99,32 @@ def _sanitize_patch_for_apply(patch: str) -> str:
     return patch
 
 
-def evaluate_patch(
+def _prepare_patch_and_predictions(
     *,
     instance_id: str,
     patch: str,
     dataset_name: str,
     out_dir: Path,
     run_id: str,
-    split: str = "test",
-) -> Dict[str, Any]:
-    """Run SWE-bench harness for a single patch by writing a JSONL predictions file."""
-    # First filter out new files (test scripts, Django projects, etc) - these are usually agent mistakes
+    split: str,
+) -> tuple[Dict[str, Any], list] | Dict[str, Any]:
+    """Common preparation: filter/sanitize patch, build predictions, get dataset instances.
+    
+    Returns (predictions, instances) on success, or error dict on failure.
+    """
     patch = _filter_new_files_from_patch(patch or "")
-    # Then sanitize for git apply (handle truncation)
     patch = _sanitize_patch_for_apply(patch or "")
     out_dir.mkdir(parents=True, exist_ok=True)
     preds_path = out_dir / f"preds_{run_id}.jsonl"
     preds_path.write_text(
-        json.dumps(
-            {
-                "instance_id": instance_id,
-                "model_name_or_path": "csc+mini",
-                "model_patch": patch,
-            }
-        )
-        + "\n",
+        json.dumps({
+            "instance_id": instance_id,
+            "model_name_or_path": "csc+mini",
+            "model_patch": patch,
+        }) + "\n",
         encoding="utf-8",
     )
 
-    # Build predictions dict
     predictions = {
         instance_id: {
             "instance_id": instance_id,
@@ -133,9 +133,6 @@ def evaluate_patch(
         }
     }
 
-    # Get dataset instances
-    # Note: rewrite_reports=True only returns instances with existing test_output.txt
-    # We use rewrite_reports=False to evaluate fresh instances
     print(f"[HARNESS] Getting dataset instances for {instance_id} (split={split}, dataset={dataset_name})")
     instances = get_dataset_from_preds(
         dataset_name=dataset_name,
@@ -149,38 +146,65 @@ def evaluate_patch(
 
     if not instances:
         print(f"[HARNESS] No instances returned from get_dataset_from_preds for {instance_id}")
-        print(f"[HARNESS] Predictions keys: {list(predictions.keys())}")
-        print(f"[HARNESS] Prediction structure: {list(predictions[instance_id].keys()) if instance_id in predictions else 'missing'}")
         return {"error": "No instances to evaluate", "instance_id": instance_id}
-    
-    print(f"[HARNESS] Found {len(instances)} instance(s) to evaluate")
 
-    # Run evaluation
-    # Note: run_instances() creates docker client internally with docker.from_env()
-    # We verify Docker/Podman is available first to provide better error messages
-    import docker
-    import os
-    
-    # Try to find podman socket if docker socket is not available
+    print(f"[HARNESS] Found {len(instances)} instance(s) to evaluate")
+    return predictions, instances
+
+
+def _read_report(run_id: str, instance_id: str) -> Dict[str, Any]:
+    """Read evaluation report from disk. Tries multiple paths for swebench compat."""
+    model_name = "csc+mini"
+    possible_paths = [
+        RUN_EVALUATION_LOG_DIR / run_id / LOG_REPORT,
+        RUN_EVALUATION_LOG_DIR / run_id / model_name / instance_id / LOG_REPORT,
+    ]
+
+    for path in possible_paths:
+        if path.exists():
+            report = json.loads(path.read_text())
+            print(f"[HARNESS] Report found at {path}, keys: {list(report.keys())}")
+            if "resolved" in report:
+                print(f"[HARNESS] resolved: {report.get('resolved', [])}")
+            if "applied" in report:
+                print(f"[HARNESS] applied: {report.get('applied', [])}")
+            if instance_id in report and isinstance(report[instance_id], dict):
+                print(f"[HARNESS] Found instance data at report['{instance_id}']")
+            return report
+
+    print(f"[HARNESS] Report not found. Tried paths:")
+    for path in possible_paths:
+        print(f"[HARNESS]   - {path}")
+    return {"error": "Report not found", "instance_id": instance_id}
+
+
+# ---------------------------------------------------------------------------
+# Docker evaluation (original path)
+# ---------------------------------------------------------------------------
+def _evaluate_patch_docker(
+    predictions: Dict[str, Any],
+    instances: list,
+    run_id: str,
+    instance_id: str,
+) -> Dict[str, Any]:
+    """Evaluate patch using local Docker/Podman containers."""
+    import docker as docker_lib
+
     docker_host = os.environ.get("DOCKER_HOST")
     print(f"[HARNESS] DOCKER_HOST env: {docker_host}")
     if not docker_host:
-        # Try to get podman socket location from podman info
         import subprocess
         podman_sock = None
         try:
             result = subprocess.run(
                 ["podman", "info", "--format", "{{.Host.RemoteSocket.Path}}"],
-                capture_output=True,
-                text=True,
-                timeout=5,
+                capture_output=True, text=True, timeout=5,
             )
             if result.returncode == 0 and result.stdout.strip():
                 podman_sock = result.stdout.strip()
         except (subprocess.TimeoutExpired, FileNotFoundError, Exception):
             pass
-        
-        # If socket path from podman info doesn't exist, try common locations
+
         if not podman_sock or not os.path.exists(podman_sock):
             podman_sockets = [
                 f"/run/user/{os.getuid()}/podman/podman.sock",
@@ -190,18 +214,13 @@ def evaluate_patch(
                 if os.path.exists(sock_path):
                     podman_sock = sock_path
                     break
-        
-        # If we found a socket path but it doesn't exist, try to start podman service
+
         if podman_sock and not os.path.exists(podman_sock):
             try:
-                # Start podman system service in background (time=0 means run until stopped)
-                # Note: This creates the socket if podman is available
                 subprocess.Popen(
                     ["podman", "system", "service", "--time=0", f"unix://{podman_sock}"],
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
+                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                 )
-                # Wait a bit for socket to be created
                 import time
                 for _ in range(5):
                     if os.path.exists(podman_sock):
@@ -209,25 +228,23 @@ def evaluate_patch(
                     time.sleep(0.5)
             except (FileNotFoundError, Exception):
                 pass
-        
+
         if podman_sock and os.path.exists(podman_sock):
             os.environ["DOCKER_HOST"] = f"unix://{podman_sock}"
             print(f"[HARNESS] Using podman socket: {podman_sock}")
-    
+
     try:
-        client = docker.from_env()
+        client = docker_lib.from_env()
         client.ping()
         print(f"[HARNESS] Docker/Podman connection verified")
-    except Exception as docker_check_error:
-        error_type = type(docker_check_error).__name__
-        error_msg = str(docker_check_error)
-        print(f"[HARNESS] Docker/Podman check failed: {error_type}: {error_msg}")
-        print(f"[HARNESS] Docker/Podman daemon may not be running or socket not accessible")
-        print(f"[HARNESS] Try: sudo systemctl start docker (Linux) or check Docker Desktop (macOS/Windows)")
-        print(f"[HARNESS] Or: sudo usermod -aG docker $USER (add user to docker group)")
-        print(f"[HARNESS] Or set DOCKER_HOST environment variable to podman socket path")
-        return {"error": "Docker not available", "instance_id": instance_id, "error_type": error_type, "error_msg": error_msg}
-    
+    except Exception as e:
+        return {
+            "error": "Docker not available",
+            "instance_id": instance_id,
+            "error_type": type(e).__name__,
+            "error_msg": str(e),
+        }
+
     try:
         run_instances(
             predictions=predictions,
@@ -240,53 +257,88 @@ def evaluate_patch(
             timeout=1800,
         )
     except Exception as e:
-        error_type = type(e).__name__
         error_msg = str(e)
-        print(f"[HARNESS] Exception during run_instances: {error_type}: {error_msg}")
-        # Check if it's a Docker connection error
-        if "docker" in error_msg.lower() or "Connection" in error_msg or "No such file" in error_msg or "API version" in error_msg:
-            print(f"[HARNESS] Docker connection error - Docker daemon may not be running or socket not accessible")
-            print(f"[HARNESS] Try: sudo systemctl start docker (Linux) or check Docker Desktop (macOS/Windows)")
-            return {"error": "Docker connection failed", "instance_id": instance_id, "error_type": error_type, "error_msg": error_msg}
-        # Re-raise other exceptions
+        if any(kw in error_msg for kw in ("docker", "Connection", "No such file", "API version")):
+            return {
+                "error": "Docker connection failed",
+                "instance_id": instance_id,
+                "error_type": type(e).__name__,
+                "error_msg": error_msg,
+            }
         raise
 
-    # Read report - try multiple paths as swebench v3 changed the structure
-    # Old path: logs/run_evaluation/{run_id}/report.json
-    # New path: logs/run_evaluation/{run_id}/{model_name}/{instance_id}/report.json
-    model_name = "csc+mini"
-    possible_paths = [
-        RUN_EVALUATION_LOG_DIR / run_id / LOG_REPORT,  # Old swebench path
-        RUN_EVALUATION_LOG_DIR / run_id / model_name / instance_id / LOG_REPORT,  # New swebench v3 path
-    ]
-    
-    report_path = None
-    for path in possible_paths:
-        if path.exists():
-            report_path = path
-            break
-    
-    if report_path:
-        report = json.loads(report_path.read_text())
-        print(f"[HARNESS] Report found at {report_path}, keys: {list(report.keys())}")
-        # Log key fields for debugging
-        if "resolved" in report:
-            print(f"[HARNESS] resolved: {report.get('resolved', [])}")
-        if "applied" in report:
-            print(f"[HARNESS] applied: {report.get('applied', [])}")
-        if "instance_results" in report:
-            print(f"[HARNESS] instance_results keys: {list(report['instance_results'].keys()) if isinstance(report.get('instance_results'), dict) else 'not a dict'}")
-        # swebench v3 uses instance_id as top-level key directly
-        if instance_id in report and isinstance(report[instance_id], dict):
-            print(f"[HARNESS] Found instance data at report['{instance_id}']")
-        return report
+    return _read_report(run_id, instance_id)
 
-    print(f"[HARNESS] Report not found. Tried paths:")
-    for path in possible_paths:
-        print(f"[HARNESS]   - {path}")
-    print(f"[HARNESS] RUN_EVALUATION_LOG_DIR: {RUN_EVALUATION_LOG_DIR}")
-    print(f"[HARNESS] run_id: {run_id}")
-    return {"error": "Report not found", "instance_id": instance_id}
+
+# ---------------------------------------------------------------------------
+# Modal evaluation (cloud, no local Docker needed)
+# ---------------------------------------------------------------------------
+def _evaluate_patch_modal(
+    predictions: Dict[str, Any],
+    instances: list,
+    full_dataset: list,
+    run_id: str,
+    instance_id: str,
+) -> Dict[str, Any]:
+    """Evaluate patch using Modal cloud sandboxes (no local Docker required)."""
+    validate_modal_credentials()
+    print(f"[HARNESS-MODAL] Running evaluation on Modal for {instance_id}")
+    try:
+        run_instances_modal(
+            predictions=predictions,
+            instances=instances,
+            full_dataset=full_dataset,
+            run_id=run_id,
+            timeout=1800,
+        )
+    except Exception as e:
+        error_msg = str(e)
+        print(f"[HARNESS-MODAL] Exception during run_instances_modal: {type(e).__name__}: {error_msg}")
+        return {
+            "error": "Modal evaluation failed",
+            "instance_id": instance_id,
+            "error_type": type(e).__name__,
+            "error_msg": error_msg,
+        }
+
+    return _read_report(run_id, instance_id)
+
+
+# ---------------------------------------------------------------------------
+# Public API
+# ---------------------------------------------------------------------------
+def evaluate_patch(
+    *,
+    instance_id: str,
+    patch: str,
+    dataset_name: str,
+    out_dir: Path,
+    run_id: str,
+    split: str = "test",
+    eval_backend: str = "docker",
+) -> Dict[str, Any]:
+    """Run SWE-bench harness for a single patch.
+    
+    eval_backend: "docker" (local Docker/Podman) or "modal" (Modal cloud).
+    """
+    result = _prepare_patch_and_predictions(
+        instance_id=instance_id,
+        patch=patch,
+        dataset_name=dataset_name,
+        out_dir=out_dir,
+        run_id=run_id,
+        split=split,
+    )
+    if isinstance(result, dict):
+        # Error during preparation
+        return result
+    predictions, instances = result
+
+    if eval_backend == "modal":
+        full_dataset = load_swebench_dataset(dataset_name, split)
+        return _evaluate_patch_modal(predictions, instances, full_dataset, run_id, instance_id)
+    else:
+        return _evaluate_patch_docker(predictions, instances, run_id, instance_id)
 
 
 def extract_instance_result(results: Dict[str, Any], instance_id: str) -> Optional[Dict[str, Any]]:
