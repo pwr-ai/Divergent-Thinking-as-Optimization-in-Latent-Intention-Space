@@ -295,8 +295,9 @@ mirror_to_tmp() {
             "$LOCAL_PROJECT/.venv/bin/activate"
     fi
 
-    # Switch working directory to local copy
+    # Switch working directory to local copy (harness uses CWD for relative paths)
     cd "$LOCAL_PROJECT"
+    export SWE_RUN_WORKING_DIR="$LOCAL_PROJECT"
 
     # Update MINI_CONFIG if it referenced SCRIPT_DIR
     if [[ "$MINI_CONFIG" == "${SCRIPT_DIR}"* ]]; then
@@ -500,9 +501,11 @@ run_dataset() {
     echo "DOCKER_HOST: $DOCKER_HOST"
     
     # WCSS: pass PD path so run_dataset.py syncs after each instance (survive instant kill)
+    # Ensure harness uses TMP (CWD); mirror_to_tmp already set SWE_RUN_WORKING_DIR, re-export for clarity
     local PD_DIR_ARG=""
     if [ "$RUN_BASE" != "$SCRIPT_DIR" ]; then
         PD_DIR_ARG="--pd_dir ${SCRIPT_DIR}/dataset_runs"
+        export SWE_RUN_WORKING_DIR="${RUN_BASE}/project"
     fi
     
     # Pass Tabu-specific parameters via environment or args

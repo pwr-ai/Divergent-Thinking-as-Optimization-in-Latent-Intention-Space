@@ -25,6 +25,12 @@ import time
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
 
+# Force CWD to TMP project dir so harness and all relative paths use local storage (WCSS)
+if os.environ.get("SWE_RUN_WORKING_DIR"):
+    _work = Path(os.environ["SWE_RUN_WORKING_DIR"])
+    if _work.is_dir():
+        os.chdir(_work)
+
 # Before importing swebench: point harness logs and build dirs to TMPDIR (HPC: reduce Lustre PD I/O)
 if os.environ.get("SWE_RUN_EVAL_LOG_DIR"):
     import swebench.harness.constants as _sb_const
