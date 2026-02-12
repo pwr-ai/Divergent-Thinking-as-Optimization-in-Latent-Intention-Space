@@ -499,6 +499,12 @@ run_dataset() {
     export DOCKER_HOST="${DOCKER_HOST:-unix://$PODMAN_SOCKET}"
     echo "DOCKER_HOST: $DOCKER_HOST"
     
+    # WCSS: pass PD path so run_dataset.py syncs after each instance (survive instant kill)
+    local PD_DIR_ARG=""
+    if [ "$RUN_BASE" != "$SCRIPT_DIR" ]; then
+        PD_DIR_ARG="--pd_dir ${SCRIPT_DIR}/dataset_runs"
+    fi
+    
     # Pass Tabu-specific parameters via environment or args
     .venv/bin/python run_dataset.py \
         --csc "http://localhost:${CSC_PORT}" \
@@ -524,6 +530,7 @@ run_dataset() {
         --stagnation_threshold "$STAGNATION_THRESHOLD" \
         --kick_probability "$KICK_PROBABILITY" \
         --eval_backend "${EVAL_BACKEND:-docker}" \
+        ${PD_DIR_ARG:-} \
         2>&1 | tee "$DATASET_LOG"
     
     local dataset_exit=${PIPESTATUS[0]}

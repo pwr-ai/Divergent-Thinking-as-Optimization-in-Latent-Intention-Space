@@ -606,6 +606,25 @@ def append_jsonl(path: Path, obj: Dict[str, Any]) -> None:
         f.write(json.dumps(obj, ensure_ascii=False) + "\n")
 
 
+def _sync_to_pd(out_root: Path, pd_dir: Optional[Path]) -> None:
+    """Sync dataset_runs from TMP to PD after each instance (WCSS: survive instant kill)."""
+    if pd_dir is None:
+        return
+    if out_root == pd_dir:
+        return  # already on PD, nothing to do
+    import subprocess
+    pd_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        subprocess.run(
+            ["rsync", "-a", str(out_root) + "/", str(pd_dir) + "/"],
+            timeout=120, check=False, capture_output=True,
+        )
+    except Exception as e:
+        print(f"[SYNC] rsync to PD failed: {e}")
+    else:
+        print(f"[SYNC] Synced {out_root} -> {pd_dir}")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--csc", required=True, help="CSC server base URL, e.g. http://127.0.0.1:8000")
@@ -642,6 +661,8 @@ def main():
     # Evaluation backend
     ap.add_argument("--eval_backend", default="docker", choices=["docker", "modal"],
                     help="Evaluation backend: docker (local Docker/Podman) or modal (Modal cloud, no Docker needed). Run 'modal token new' first for modal.")
+    ap.add_argument("--pd_dir", default=None,
+                    help="PD (persistent) directory to sync results after each instance (WCSS: survive instant kill)")
     args = ap.parse_args()
     dataset_name = args.dataset_name or get_harness_dataset_name(args.subset)
     # Harness needs effective split (Verified has only "test", not "dev")
@@ -761,6 +782,10 @@ def main():
         best_score = b.get("score") if isinstance(b, dict) else None
         err = status.get("error")
         print(f"[{count_run}] (idx={idx}) {instance_id} solved={status.get('solved')} best={best_score} time={status['wall_time_sec']}s" + (f" error={err}" if err else ""))
+
+        # WCSS: sync to PD after each instance (survive instant kill)
+        pd_dir = Path(args.pd_dir) / out_root.name if args.pd_dir else None
+        _sync_to_pd(out_root, pd_dir)
 
     print(f"Done. ran={count_run} (start_at={args.start_at}) resume={args.resume} out={out_root}")
 
