@@ -343,6 +343,10 @@ def evaluate_patch(
 
 def extract_instance_result(results: Dict[str, Any], instance_id: str) -> Optional[Dict[str, Any]]:
     """Try common keys for per-instance results across swebench versions."""
+    # Harness returned an error (e.g. Docker connection failed)
+    if results.get("error") and "error_msg" in results:
+        print(f"[EXTRACT] Harness error for {instance_id}: {results.get('error_type', 'Unknown')}: {results.get('error_msg', '')}")
+        return None
     # Check if instance is in resolved list
     resolved = instance_id in results.get("resolved", [])
     
