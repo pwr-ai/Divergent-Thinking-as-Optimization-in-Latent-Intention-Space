@@ -60,6 +60,9 @@ MAX_STEPS_TABU="${MAX_STEPS_TABU:-5}"
 # Multi-instance mode: set MAX_INSTANCES > 1 to run on dataset instead of single instance
 MAX_INSTANCES="${MAX_INSTANCES:-1}"
 START_AT="${START_AT:-6}"
+# Parallel runs (same split, different START_AT): set RUN_ID=1, RUN_ID=2, ... so each run
+# writes to dataset_runs_run_1, dataset_runs_run_2 (no rsync/output conflicts).
+RUN_ID="${RUN_ID:-}"
 
 # Tabu Search specific parameters
 TABU_TENURE="${TABU_TENURE:-50}"
@@ -82,7 +85,10 @@ else
   RUN_BASE="${SCRIPT_DIR}"
 fi
 LOG_DIR="${RUN_BASE}/logs"
-DATASET_OUT_BASE="${RUN_BASE}/dataset_runs"
+# Run-specific output dir when RUN_ID is set (parallel runs on same split, different START_AT)
+OUT_SUFFIX=""
+[ -n "${RUN_ID:-}" ] && OUT_SUFFIX="_run_${RUN_ID}"
+DATASET_OUT_BASE="${RUN_BASE}/dataset_runs${OUT_SUFFIX}"
 mkdir -p "$LOG_DIR"
 mkdir -p "$DATASET_OUT_BASE"
 # Harness run_evaluation writes report.json etc. here
@@ -210,15 +216,15 @@ cleanup() {
     # WCSS: final sync TMP -> PD (safety net for interrupted runs)
     if [ "$RUN_BASE" != "$SCRIPT_DIR" ] && [ -d "$DATASET_OUT_BASE" ]; then
         echo "Final sync: dataset_runs TMP -> PD..."
-        mkdir -p "${SCRIPT_DIR}/dataset_runs"
-        rsync -a "$DATASET_OUT_BASE/" "${SCRIPT_DIR}/dataset_runs/" 2>/dev/null || \
-            cp -r "$DATASET_OUT_BASE/"* "${SCRIPT_DIR}/dataset_runs/" 2>/dev/null || true
+        mkdir -p "${SCRIPT_DIR}/dataset_runs${OUT_SUFFIX}"
+        rsync -a "$DATASET_OUT_BASE/" "${SCRIPT_DIR}/dataset_runs${OUT_SUFFIX}/" 2>/dev/null || \
+            cp -r "$DATASET_OUT_BASE/"* "${SCRIPT_DIR}/dataset_runs${OUT_SUFFIX}/" 2>/dev/null || true
     fi
     
     # WCSS: clean TMPDIR (PD is for storage, TMPDIR for computation only)
     if [ "$RUN_BASE" != "$SCRIPT_DIR" ] && [ -n "${TMPDIR:-}" ]; then
         echo "Cleaning TMPDIR contents..."
-        rm -rf "${TMPDIR:?}/project" "${TMPDIR:?}/hf_cache" "${TMPDIR:?}/logs" "${TMPDIR:?}/dataset_runs" 2>/dev/null || true
+        rm -rf "${TMPDIR:?}/project" "${TMPDIR:?}/hf_cache" "${TMPDIR:?}/logs" "$DATASET_OUT_BASE" 2>/dev/null || true
     fi
     
     echo "Cleanup complete."
@@ -475,6 +481,7 @@ run_dataset() {
     echo "Split: $SPLIT"
     echo "Max instances: $MAX_INSTANCES"
     echo "Start at: $START_AT"
+    [ -n "${RUN_ID:-}" ] && echo "Run ID (parallel): $RUN_ID"
     echo "Config: $MINI_CONFIG"
     echo "Rounds: $ROUNDS, K: $K"
     echo "Tabu tenure: $TABU_TENURE"
@@ -482,13 +489,13 @@ run_dataset() {
     echo "Stagnation threshold: $STAGNATION_THRESHOLD"
     echo "Kick probability: $KICK_PROBABILITY"
     echo "Log: $DATASET_LOG"
-    echo "Out dir: ${DATASET_OUT_BASE}/${SUBSET}_${SPLIT}_tabu (RUN_BASE=$RUN_BASE)"
+    echo "Out dir: ${DATASET_OUT_BASE}/${SUBSET}_${SPLIT}_tabu (RUN_BASE=$RUN_BASE)${RUN_ID:+ RUN_ID=$RUN_ID}"
     
     # When using TMP: sync PD -> TMP so --resume sees previous results
-    if [ "$RUN_BASE" != "$SCRIPT_DIR" ] && [ -d "${SCRIPT_DIR}/dataset_runs" ]; then
-        echo "Syncing PD dataset_runs -> $RUN_BASE for resume..."
+    if [ "$RUN_BASE" != "$SCRIPT_DIR" ] && [ -d "${SCRIPT_DIR}/dataset_runs${OUT_SUFFIX}" ]; then
+        echo "Syncing PD dataset_runs${OUT_SUFFIX} -> $RUN_BASE for resume..."
         mkdir -p "$DATASET_OUT_BASE"
-        rsync -a "${SCRIPT_DIR}/dataset_runs/" "$DATASET_OUT_BASE/" 2>/dev/null || cp -r "${SCRIPT_DIR}/dataset_runs/"* "$DATASET_OUT_BASE/" 2>/dev/null || true
+        rsync -a "${SCRIPT_DIR}/dataset_runs${OUT_SUFFIX}/" "$DATASET_OUT_BASE/" 2>/dev/null || cp -r "${SCRIPT_DIR}/dataset_runs${OUT_SUFFIX}/"* "$DATASET_OUT_BASE/" 2>/dev/null || true
     fi
     
     source .venv/bin/activate
@@ -541,7 +548,7 @@ run_dataset() {
     # Ensure harness uses TMP (CWD); mirror_to_tmp already set SWE_RUN_WORKING_DIR, re-export for clarity
     local PD_DIR_ARG=""
     if [ "$RUN_BASE" != "$SCRIPT_DIR" ]; then
-        PD_DIR_ARG="--pd_dir ${SCRIPT_DIR}/dataset_runs"
+        PD_DIR_ARG="--pd_dir ${SCRIPT_DIR}/dataset_runs${OUT_SUFFIX}"
         export SWE_RUN_WORKING_DIR="${RUN_BASE}/project"
     fi
     
@@ -577,9 +584,9 @@ run_dataset() {
     
     # When using TMP: sync results back to PD (for resume and persistence)
     if [ "$RUN_BASE" != "$SCRIPT_DIR" ] && [ -d "$DATASET_OUT_BASE" ]; then
-        echo "Syncing dataset_runs $RUN_BASE -> PD..."
-        mkdir -p "${SCRIPT_DIR}/dataset_runs"
-        rsync -a "$DATASET_OUT_BASE/" "${SCRIPT_DIR}/dataset_runs/" 2>/dev/null || cp -r "$DATASET_OUT_BASE/"* "${SCRIPT_DIR}/dataset_runs/" 2>/dev/null || true
+        echo "Syncing dataset_runs${OUT_SUFFIX} $RUN_BASE -> PD..."
+        mkdir -p "${SCRIPT_DIR}/dataset_runs${OUT_SUFFIX}"
+        rsync -a "$DATASET_OUT_BASE/" "${SCRIPT_DIR}/dataset_runs${OUT_SUFFIX}/" 2>/dev/null || cp -r "$DATASET_OUT_BASE/"* "${SCRIPT_DIR}/dataset_runs${OUT_SUFFIX}/" 2>/dev/null || true
     fi
     
     if [ $dataset_exit -ne 0 ]; then
@@ -618,6 +625,7 @@ Environment variables (can be set before running):
   MAX_STEPS_TABU       - Max steps per Tabu candidate (default: 5)
   MAX_INSTANCES        - Number of instances to run (default: 1)
   START_AT             - Index of first instance in dataset (default: 6)
+  RUN_ID               - If set, output to dataset_runs_run_<RUN_ID> (parallel runs, same split, no conflicts)
 
   Tabu Search specific:
   TABU_TENURE          - How long solutions stay tabu (default: 50)
@@ -639,6 +647,11 @@ Examples:
 
   # Run from instance index 20 (single instance or first of N)
   START_AT=20 MAX_INSTANCES=1 ./run_pipeline_tabu.sh
+
+  # Parallel runs (same split, different instance ranges): different RUN_ID each
+  RUN_ID=1 START_AT=0   MAX_INSTANCES=50 ./run_pipeline_tabu.sh &
+  RUN_ID=2 START_AT=50  MAX_INSTANCES=50 ./run_pipeline_tabu.sh &
+  wait
 
   # Aggressive Tabu Search (longer tenure, more kicks)
   TABU_TENURE=100 KICK_PROBABILITY=0.25 ./run_pipeline_tabu.sh
