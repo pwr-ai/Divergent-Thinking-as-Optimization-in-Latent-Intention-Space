@@ -25,10 +25,19 @@ import time
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
 
-# Before importing swebench: point harness run_evaluation logs to TMPDIR (HPC: reduce Lustre PD I/O)
+# Before importing swebench: point harness logs and build dirs to TMPDIR (HPC: reduce Lustre PD I/O)
 if os.environ.get("SWE_RUN_EVAL_LOG_DIR"):
     import swebench.harness.constants as _sb_const
     _sb_const.RUN_EVALUATION_LOG_DIR = Path(os.environ["SWE_RUN_EVAL_LOG_DIR"])
+    # Also redirect Docker image build dirs to local storage
+    _log_base = Path(os.environ["SWE_RUN_EVAL_LOG_DIR"]).parent
+    for _attr, _subdir in [
+        ("BASE_IMAGE_BUILD_DIR", "build_images/base"),
+        ("ENV_IMAGE_BUILD_DIR", "build_images/env"),
+        ("INSTANCE_IMAGE_BUILD_DIR", "build_images/instances"),
+    ]:
+        if hasattr(_sb_const, _attr):
+            setattr(_sb_const, _attr, _log_base / _subdir)
 
 from datasets import load_dataset
 

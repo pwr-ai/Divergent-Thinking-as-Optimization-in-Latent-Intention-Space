@@ -89,6 +89,20 @@ mkdir -p "$DATASET_OUT_BASE"
 export SWE_RUN_EVAL_LOG_DIR="${LOG_DIR}/run_evaluation"
 mkdir -p "$SWE_RUN_EVAL_LOG_DIR"
 
+# When using TMP: redirect all caches to local storage (WCSS: PD is for storage, not computation)
+if [ "$RUN_BASE" != "$SCRIPT_DIR" ]; then
+  export HF_HOME="${RUN_BASE}/hf_cache"
+  export HF_DATASETS_CACHE="${HF_HOME}/datasets"
+  mkdir -p "$HF_DATASETS_CACHE"
+  # Pre-populate HF cache from PD (model weights, tokenizers, datasets)
+  # so that from_pretrained() finds them locally instead of re-downloading
+  if [ -d "${HOME}/.cache/huggingface" ]; then
+    echo "Pre-populating HF cache from PD -> TMP..."
+    rsync -a "${HOME}/.cache/huggingface/" "${HF_HOME}/" 2>/dev/null || true
+  fi
+  echo "HF cache on TMP: HF_HOME=$HF_HOME"
+fi
+
 # Log files
 VLLM_LOG="${LOG_DIR}/vllm_$(date +%Y%m%d_%H%M%S).log"
 CSC_LOG="${LOG_DIR}/csc_tabu_$(date +%Y%m%d_%H%M%S).log"
@@ -193,6 +207,20 @@ cleanup() {
         kill "$PODMAN_SERVICE_PID" 2>/dev/null || true
     fi
     
+    # WCSS: final sync TMP -> PD (safety net for interrupted runs)
+    if [ "$RUN_BASE" != "$SCRIPT_DIR" ] && [ -d "$DATASET_OUT_BASE" ]; then
+        echo "Final sync: dataset_runs TMP -> PD..."
+        mkdir -p "${SCRIPT_DIR}/dataset_runs"
+        rsync -a "$DATASET_OUT_BASE/" "${SCRIPT_DIR}/dataset_runs/" 2>/dev/null || \
+            cp -r "$DATASET_OUT_BASE/"* "${SCRIPT_DIR}/dataset_runs/" 2>/dev/null || true
+    fi
+    
+    # WCSS: clean TMPDIR (PD is for storage, TMPDIR for computation only)
+    if [ "$RUN_BASE" != "$SCRIPT_DIR" ] && [ -n "${TMPDIR:-}" ]; then
+        echo "Cleaning TMPDIR contents..."
+        rm -rf "${TMPDIR:?}/project" "${TMPDIR:?}/hf_cache" "${TMPDIR:?}/logs" "${TMPDIR:?}/dataset_runs" 2>/dev/null || true
+    fi
+    
     echo "Cleanup complete."
 }
 
@@ -230,6 +258,54 @@ wait_for_server() {
     
     echo "✗ $name failed to start within ${max_wait}s"
     return 1
+}
+
+# Mirror project (incl. .venv) to TMP so ALL disk I/O stays off Lustre.
+# Called from main() before starting servers.
+# Skips if RUN_BASE == SCRIPT_DIR (no TMP configured).
+mirror_to_tmp() {
+    if [ "$RUN_BASE" = "$SCRIPT_DIR" ]; then
+        return 0
+    fi
+
+    echo ""
+    echo "=== Mirroring project to local storage (TMP) ==="
+    echo "  Source: $SCRIPT_DIR"
+    echo "  Target: ${RUN_BASE}/project"
+
+    local LOCAL_PROJECT="${RUN_BASE}/project"
+    local T0=$(date +%s)
+    mkdir -p "$LOCAL_PROJECT"
+
+    # Copy everything except output dirs, git history, and bytecode caches
+    rsync -a --delete \
+        --exclude='dataset_runs' \
+        --exclude='logs' \
+        --exclude='.git' \
+        --exclude='__pycache__' \
+        --exclude='*.pyc' \
+        "$SCRIPT_DIR/" "$LOCAL_PROJECT/"
+
+    local T1=$(date +%s)
+    echo "  Rsync completed in $((T1 - T0))s"
+
+    # Fix venv activate to use the new path (PATH and VIRTUAL_ENV)
+    if [ -f "$LOCAL_PROJECT/.venv/bin/activate" ]; then
+        sed -i "s|VIRTUAL_ENV=.*|VIRTUAL_ENV=\"${LOCAL_PROJECT}/.venv\"|" \
+            "$LOCAL_PROJECT/.venv/bin/activate"
+    fi
+
+    # Switch working directory to local copy
+    cd "$LOCAL_PROJECT"
+
+    # Update MINI_CONFIG if it referenced SCRIPT_DIR
+    if [[ "$MINI_CONFIG" == "${SCRIPT_DIR}"* ]]; then
+        MINI_CONFIG="${LOCAL_PROJECT}${MINI_CONFIG#${SCRIPT_DIR}}"
+    fi
+
+    echo "  Working dir: $(pwd)"
+    echo "  MINI_CONFIG: $MINI_CONFIG"
+    echo ""
 }
 
 # Start vLLM server
@@ -278,8 +354,8 @@ start_vllm() {
         --tensor-parallel-size 4 \
         --max-model-len $VLLM_CONTEXT \
         --gpu-memory-utilization $VLLM_GPU_UTIL \
-        --dtype $VLLM_DTYPE" \
-        --enforce-eager
+        --dtype $VLLM_DTYPE \
+        --enforce-eager"
     
     # Add quantization if specified
     if [ -n "$VLLM_QUANTIZATION" ]; then
@@ -585,6 +661,9 @@ main() {
         echo "Eval backend: ${EVAL_BACKEND} (skipping Docker/Podman socket setup)"
     fi
     
+    # Mirror project to local storage (TMP) to avoid Lustre I/O
+    mirror_to_tmp
+
     # Start servers
     if ! start_vllm; then
         echo "Failed to start vLLM. Exiting."

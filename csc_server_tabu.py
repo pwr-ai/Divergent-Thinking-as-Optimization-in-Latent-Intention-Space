@@ -701,7 +701,15 @@ Core fix approach (one sentence):"""
 
         emb = torch.tensor(x, device=device, dtype=_dtype_retr)
         prompt = self.spec.intention_prompt or self._default_intention_prompt()
-        raw = generate_from_embedding(emb, prompt, max_new_tokens=max_new_tokens, do_sample=True).strip()
+        try:
+            raw = generate_from_embedding(emb, prompt, max_new_tokens=max_new_tokens, do_sample=do_sample).strip()
+        except Exception as e:
+            # do_sample=True can trigger CUDA assert when probs have nan/inf (torch.multinomial)
+            err_msg = str(e).lower()
+            if any(k in err_msg for k in ("multinomial", "probability", "assert", "cuda", "device-side")):
+                raw = generate_from_embedding(emb, prompt, max_new_tokens=max_new_tokens, do_sample=False).strip()
+            else:
+                raise
 
         if looks_like_junk(raw):
             raw = "Propose a minimal, targeted logic change to prevent the false positive rule trigger."
