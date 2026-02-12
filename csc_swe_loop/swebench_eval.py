@@ -15,6 +15,18 @@ from swebench.harness.run_evaluation import (
 from swebench.harness.modal_eval import run_instances_modal, validate_modal_credentials
 from swebench.harness.utils import load_swebench_dataset
 
+# In-memory dataset cache: avoids calling load_dataset() on every evaluate_patch()
+# (each call does ~50 stat/open ops on HF cache; with 80+ evals per instance this adds up)
+_dataset_cache: Dict[str, list] = {}
+
+
+def _get_cached_dataset(dataset_name: str, split: str) -> list:
+    """Load dataset once, reuse from memory on subsequent calls."""
+    key = f"{dataset_name}::{split}"
+    if key not in _dataset_cache:
+        _dataset_cache[key] = load_swebench_dataset(dataset_name, split)
+    return _dataset_cache[key]
+
 
 def _filter_new_files_from_patch(patch: str) -> str:
     """Remove new file diffs from patch, keeping only modifications to existing files.
@@ -133,19 +145,14 @@ def _prepare_patch_and_predictions(
         }
     }
 
-    print(f"[HARNESS] Getting dataset instances for {instance_id} (split={split}, dataset={dataset_name})")
-    instances = get_dataset_from_preds(
-        dataset_name=dataset_name,
-        split=split,
-        instance_ids=[instance_id],
-        predictions=predictions,
-        run_id=run_id,
-        rewrite_reports=False,
-        exclude_completed=False,
-    )
+    # Use in-memory cached dataset instead of get_dataset_from_preds()
+    # (avoids load_dataset() on every call — saves ~50 file ops × 80+ evals per instance)
+    print(f"[HARNESS] Getting dataset instance for {instance_id} (split={split}, dataset={dataset_name})")
+    full_dataset = _get_cached_dataset(dataset_name, split)
+    instances = [i for i in full_dataset if i["instance_id"] == instance_id and instance_id in predictions]
 
     if not instances:
-        print(f"[HARNESS] No instances returned from get_dataset_from_preds for {instance_id}")
+        print(f"[HARNESS] Instance {instance_id} not found in dataset")
         return {"error": "No instances to evaluate", "instance_id": instance_id}
 
     print(f"[HARNESS] Found {len(instances)} instance(s) to evaluate")
@@ -335,7 +342,7 @@ def evaluate_patch(
     predictions, instances = result
 
     if eval_backend == "modal":
-        full_dataset = load_swebench_dataset(dataset_name, split)
+        full_dataset = _get_cached_dataset(dataset_name, split)
         return _evaluate_patch_modal(predictions, instances, full_dataset, run_id, instance_id)
     else:
         return _evaluate_patch_docker(predictions, instances, run_id, instance_id)
