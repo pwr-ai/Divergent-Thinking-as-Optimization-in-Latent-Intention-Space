@@ -494,11 +494,48 @@ run_dataset() {
     source .venv/bin/activate
     
     export MSWEA_COST_TRACKING="ignore_errors"
+    export MSWEA_SILENT_STARTUP=1
     export OPENAI_API_BASE="http://localhost:${VLLM_PORT}/v1"
     export OPENAI_API_KEY="dummy"
-    export PATH="/home/user/.local/bin:$PATH"
     export DOCKER_HOST="${DOCKER_HOST:-unix://$PODMAN_SOCKET}"
     echo "DOCKER_HOST: $DOCKER_HOST"
+    
+    # Use Python-based Docker API CLI when no docker binary is available (HPC).
+    # mini-swe-agent reads MSWEA_DOCKER_EXECUTABLE; point it at our docker_api.py.
+    if [ -z "${MSWEA_DOCKER_EXECUTABLE:-}" ]; then
+        if command -v docker >/dev/null 2>&1; then
+            export MSWEA_DOCKER_EXECUTABLE="$(command -v docker)"
+        else
+            # No docker binary — use our Python Docker API wrapper
+            local _docker_api
+            _docker_api="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/docker_api.py"
+            if [ "$RUN_BASE" != "$SCRIPT_DIR" ] && [ -f "${RUN_BASE}/project/docker_api.py" ]; then
+                _docker_api="${RUN_BASE}/project/docker_api.py"
+            fi
+            chmod +x "$_docker_api" 2>/dev/null || true
+            export MSWEA_DOCKER_EXECUTABLE="$_docker_api"
+            echo "No docker binary found — using Python Docker API CLI: $_docker_api"
+        fi
+        echo "MSWEA_DOCKER_EXECUTABLE: $MSWEA_DOCKER_EXECUTABLE"
+    fi
+    
+    # Auto-switch: if DOCKER_HOST is a remote host (tcp://), force docker instead of apptainer.
+    # Apptainer builds local sandbox from Docker image = massive Lustre I/O on HPC;
+    # Docker via remote DOCKER_HOST has zero local disk I/O.
+    local EFFECTIVE_ENV_CLASS="${ENVIRONMENT_CLASS:-docker}"
+    if [[ "$EFFECTIVE_ENV_CLASS" == "apptainer" || "$EFFECTIVE_ENV_CLASS" == "singularity" ]]; then
+        if [[ "${DOCKER_HOST}" == tcp://* || "${DOCKER_HOST}" == ssh://* ]]; then
+            echo "WARNING: ENVIRONMENT_CLASS=$EFFECTIVE_ENV_CLASS but DOCKER_HOST is remote ($DOCKER_HOST)."
+            echo "  -> Switching to docker to avoid local sandbox builds (heavy Lustre I/O)."
+            EFFECTIVE_ENV_CLASS="docker"
+        else
+            # Safety net: redirect Apptainer cache to TMP to avoid Lustre I/O
+            export APPTAINER_CACHEDIR="${RUN_BASE}/apptainer_cache"
+            export SINGULARITY_CACHEDIR="${RUN_BASE}/apptainer_cache"
+            mkdir -p "${RUN_BASE}/apptainer_cache"
+            echo "Apptainer cache redirected to TMP: $APPTAINER_CACHEDIR"
+        fi
+    fi
     
     # WCSS: pass PD path so run_dataset.py syncs after each instance (survive instant kill)
     # Ensure harness uses TMP (CWD); mirror_to_tmp already set SWE_RUN_WORKING_DIR, re-export for clarity
@@ -516,7 +553,7 @@ run_dataset() {
         --dataset_name "$DATASET_NAME" \
         --mini_config "$MINI_CONFIG" \
         --mini_model "$MINI_MODEL" \
-        --environment_class "${ENVIRONMENT_CLASS:-docker}" \
+        --environment_class "${EFFECTIVE_ENV_CLASS}" \
         --rounds "$ROUNDS" \
         --k "$K" \
         --k_after "$K" \
