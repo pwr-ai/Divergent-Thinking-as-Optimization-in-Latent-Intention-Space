@@ -612,23 +612,36 @@ def append_jsonl(path: Path, obj: Dict[str, Any]) -> None:
         f.write(json.dumps(obj, ensure_ascii=False) + "\n")
 
 
-def _sync_to_pd(out_root: Path, pd_dir: Optional[Path]) -> None:
-    """Sync dataset_runs from TMP to PD after each instance (WCSS: survive instant kill)."""
+def _sync_to_pd(out_root: Path, pd_dir: Optional[Path], instance_id: Optional[str] = None) -> None:
+    """Copy only results.jsonl + current instance dir to PD (WCSS: survive instant kill).
+
+    Instead of rsync-ing the entire out_root (hundreds of files, high Lustre ops),
+    we copy only the files needed for --resume:
+      1) results.jsonl  (append-only, small)
+      2) <instance_id>/ dir  (bootstrap_cache.json, cache.json — needed for resume within instance)
+    """
     if pd_dir is None:
         return
     if out_root == pd_dir:
-        return  # already on PD, nothing to do
-    import subprocess
+        return
+    import shutil
     pd_dir.mkdir(parents=True, exist_ok=True)
     try:
-        subprocess.run(
-            ["rsync", "-a", str(out_root) + "/", str(pd_dir) + "/"],
-            timeout=120, check=False, capture_output=True,
-        )
+        # 1) Copy results.jsonl
+        src_results = out_root / "results.jsonl"
+        if src_results.exists():
+            shutil.copy2(str(src_results), str(pd_dir / "results.jsonl"))
+        # 2) Copy instance directory (bootstrap_cache.json, cache.json)
+        if instance_id:
+            src_inst = out_root / instance_id
+            dst_inst = pd_dir / instance_id
+            if src_inst.is_dir():
+                if dst_inst.exists():
+                    shutil.rmtree(str(dst_inst))
+                shutil.copytree(str(src_inst), str(dst_inst))
+        print(f"[SYNC] Copied results.jsonl + {instance_id or '(none)'} -> {pd_dir}")
     except Exception as e:
-        print(f"[SYNC] rsync to PD failed: {e}")
-    else:
-        print(f"[SYNC] Synced {out_root} -> {pd_dir}")
+        print(f"[SYNC] copy to PD failed: {e}")
 
 
 def main():
@@ -791,7 +804,7 @@ def main():
 
         # WCSS: sync to PD after each instance (survive instant kill)
         pd_dir = Path(args.pd_dir) / out_root.name if args.pd_dir else None
-        _sync_to_pd(out_root, pd_dir)
+        _sync_to_pd(out_root, pd_dir, instance_id=instance_id)
 
     print(f"Done. ran={count_run} (start_at={args.start_at}) resume={args.resume} out={out_root}")
 
