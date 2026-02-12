@@ -25,6 +25,11 @@ import time
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
 
+# Before importing swebench: point harness run_evaluation logs to TMPDIR (HPC: reduce Lustre PD I/O)
+if os.environ.get("SWE_RUN_EVAL_LOG_DIR"):
+    import swebench.harness.constants as _sb_const
+    _sb_const.RUN_EVALUATION_LOG_DIR = Path(os.environ["SWE_RUN_EVAL_LOG_DIR"])
+
 from datasets import load_dataset
 
 from csc_swe_loop.intent_client import CSCClient
@@ -734,12 +739,19 @@ def main():
         except Exception as e:
             status["error"] = f"{type(e).__name__}: {e}"
             status["solved"] = False
+            # Preserve best from bootstrap if loop failed (so best= is not None in summary)
+            if status.get("best") is None and status.get("bootstrap", {}).get("initial_solution"):
+                sol = status["bootstrap"]["initial_solution"]
+                status["best"] = {"score": sol.get("score"), "intention": sol.get("intention"), "info": sol.get("aux")}
 
         status["wall_time_sec"] = round(time.time() - t0, 3)
 
         append_jsonl(results_path, status)
         count_run += 1
-        print(f"[{count_run}] (idx={idx}) {instance_id} solved={status.get('solved')} best={status.get('best', {}).get('score') if isinstance(status.get('best'), dict) else None} time={status['wall_time_sec']}s")
+        b = status.get("best")
+        best_score = b.get("score") if isinstance(b, dict) else None
+        err = status.get("error")
+        print(f"[{count_run}] (idx={idx}) {instance_id} solved={status.get('solved')} best={best_score} time={status['wall_time_sec']}s" + (f" error={err}" if err else ""))
 
     print(f"Done. ran={count_run} (start_at={args.start_at}) resume={args.resume} out={out_root}")
 

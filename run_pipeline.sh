@@ -58,10 +58,22 @@ START_AT="${START_AT:-6}"
 # Directories (must be before MINI_CONFIG which uses SCRIPT_DIR)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
+# TMPDIR overrides WORK_DIR; when set, logs and dataset_runs go there (sync back to SCRIPT_DIR at end).
+if [ -n "${TMPDIR}" ]; then
+  RUN_BASE="${TMPDIR}"
+elif [ -n "${WORK_DIR}" ]; then
+  RUN_BASE="${WORK_DIR}"
+else
+  RUN_BASE="${SCRIPT_DIR}"
+fi
+LOG_DIR="${RUN_BASE}/logs"
+DATASET_OUT_BASE="${RUN_BASE}/dataset_runs"
 # Agent config: swebench_minimal.yaml forbids creating new files; override with MINI_CONFIG=path
 MINI_CONFIG="${MINI_CONFIG:-${SCRIPT_DIR}/csc_swe_loop/swebench_minimal.yaml}"
-LOG_DIR="${SCRIPT_DIR}/logs"
 mkdir -p "$LOG_DIR"
+mkdir -p "$DATASET_OUT_BASE"
+export SWE_RUN_EVAL_LOG_DIR="${LOG_DIR}/run_evaluation"
+mkdir -p "$SWE_RUN_EVAL_LOG_DIR"
 
 # Log files
 VLLM_LOG="${LOG_DIR}/vllm_$(date +%Y%m%d_%H%M%S).log"
@@ -389,7 +401,7 @@ run_bootstrap() {
     echo "DOCKER_HOST: $DOCKER_HOST"
     
     .venv/bin/python bootstrap_then_cma.py \
-        --csc "http://127.0.0.1:${CSC_PORT}" \
+        --csc "http://localhost:${CSC_PORT}" \
         --subset "$SUBSET" \
         --split "$SPLIT" \
         --instance_id "$INSTANCE_ID" \
@@ -467,6 +479,13 @@ run_dataset() {
     echo "Config: $MINI_CONFIG"
     echo "Rounds: $ROUNDS, K: $K"
     echo "Log: $DATASET_LOG"
+    echo "Out dir: ${DATASET_OUT_BASE}/${SUBSET}_${SPLIT} (RUN_BASE=$RUN_BASE)"
+    
+    if [ "$RUN_BASE" != "$SCRIPT_DIR" ] && [ -d "${SCRIPT_DIR}/dataset_runs" ]; then
+        echo "Syncing PD dataset_runs -> $RUN_BASE for resume..."
+        mkdir -p "$DATASET_OUT_BASE"
+        rsync -a "${SCRIPT_DIR}/dataset_runs/" "$DATASET_OUT_BASE/" 2>/dev/null || cp -r "${SCRIPT_DIR}/dataset_runs/"* "$DATASET_OUT_BASE/" 2>/dev/null || true
+    fi
     
     source .venv/bin/activate
     
@@ -490,18 +509,22 @@ run_dataset() {
         --k_after "$K" \
         --max_instances "$MAX_INSTANCES" \
         --start_at "$START_AT" \
-        --out "dataset_runs/${SUBSET}_${SPLIT}" \
+        --out "${DATASET_OUT_BASE}/${SUBSET}_${SPLIT}" \
         --max_steps "$MAX_STEPS_CMA" \
         --cache \
         --resume \
         2>&1 | tee "$DATASET_LOG"
     
     local dataset_exit=${PIPESTATUS[0]}
+    if [ "$RUN_BASE" != "$SCRIPT_DIR" ] && [ -d "$DATASET_OUT_BASE" ]; then
+        echo "Syncing dataset_runs $RUN_BASE -> PD..."
+        mkdir -p "${SCRIPT_DIR}/dataset_runs"
+        rsync -a "$DATASET_OUT_BASE/" "${SCRIPT_DIR}/dataset_runs/" 2>/dev/null || cp -r "$DATASET_OUT_BASE/"* "${SCRIPT_DIR}/dataset_runs/" 2>/dev/null || true
+    fi
     if [ $dataset_exit -ne 0 ]; then
         echo "✗ Dataset run failed (exit code: $dataset_exit)"
         return 1
     fi
-    
     echo "✓ Dataset run completed"
     return 0
 }

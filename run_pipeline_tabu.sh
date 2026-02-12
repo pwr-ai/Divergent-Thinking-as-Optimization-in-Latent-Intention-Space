@@ -73,8 +73,21 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 # Agent config: swebench_minimal.yaml forbids creating new files; override with MINI_CONFIG=path
 MINI_CONFIG="${MINI_CONFIG:-${SCRIPT_DIR}/csc_swe_loop/swebench_minimal.yaml}"
-LOG_DIR="${SCRIPT_DIR}/logs"
+# TMPDIR overrides WORK_DIR; when set, logs and dataset_runs go there (sync back to SCRIPT_DIR at end).
+if [ -n "${TMPDIR}" ]; then
+  RUN_BASE="${TMPDIR}"
+elif [ -n "${WORK_DIR}" ]; then
+  RUN_BASE="${WORK_DIR}"
+else
+  RUN_BASE="${SCRIPT_DIR}"
+fi
+LOG_DIR="${RUN_BASE}/logs"
+DATASET_OUT_BASE="${RUN_BASE}/dataset_runs"
 mkdir -p "$LOG_DIR"
+mkdir -p "$DATASET_OUT_BASE"
+# Harness run_evaluation writes report.json etc. here
+export SWE_RUN_EVAL_LOG_DIR="${LOG_DIR}/run_evaluation"
+mkdir -p "$SWE_RUN_EVAL_LOG_DIR"
 
 # Log files
 VLLM_LOG="${LOG_DIR}/vllm_$(date +%Y%m%d_%H%M%S).log"
@@ -118,33 +131,32 @@ setup_docker_socket() {
         return 0
     fi
     
-    # Try to start podman socket service
-    echo "Starting Podman socket service..."
-    mkdir -p "$(dirname "$PODMAN_SOCKET")"
-    
-    # Start podman system service in background
-    podman system service --time=0 "unix://$PODMAN_SOCKET" &
-    PODMAN_SERVICE_PID=$!
-    STARTED_PODMAN_SERVICE=1
-    
-    # Wait for socket to be created
-    local max_wait=10
-    local waited=0
-    while [ ! -S "$PODMAN_SOCKET" ] && [ $waited -lt $max_wait ]; do
-        sleep 1
-        waited=$((waited + 1))
-        echo "Waiting for Podman socket... ($waited/$max_wait)"
-    done
-    
-    if [ -S "$PODMAN_SOCKET" ]; then
-        export DOCKER_HOST="unix://$PODMAN_SOCKET"
-        echo "Podman socket ready: $PODMAN_SOCKET"
-        echo "DOCKER_HOST set to: $DOCKER_HOST"
-        return 0
-    else
-        echo "ERROR: Failed to start Podman socket service"
-        return 1
+    # Try to start podman socket service only if podman is installed
+    if command -v podman >/dev/null 2>&1; then
+        echo "Starting Podman socket service..."
+        mkdir -p "$(dirname "$PODMAN_SOCKET")"
+        podman system service --time=0 "unix://$PODMAN_SOCKET" &
+        PODMAN_SERVICE_PID=$!
+        STARTED_PODMAN_SERVICE=1
+        local max_wait=10
+        local waited=0
+        while [ ! -S "$PODMAN_SOCKET" ] && [ $waited -lt $max_wait ]; do
+            sleep 1
+            waited=$((waited + 1))
+            echo "Waiting for Podman socket... ($waited/$max_wait)"
+        done
+        if [ -S "$PODMAN_SOCKET" ]; then
+            export DOCKER_HOST="unix://$PODMAN_SOCKET"
+            echo "Podman socket ready: $PODMAN_SOCKET"
+            return 0
+        fi
     fi
+    
+    echo "ERROR: No Docker or Podman available."
+    echo "  - Install Docker and start the daemon, or"
+    echo "  - Set DOCKER_HOST to a remote Docker (e.g. SSH tunnel: tcp://127.0.0.1:2375), or"
+    echo "  - Use EVAL_BACKEND=modal to run evaluation in the cloud (no local Docker needed)."
+    return 1
 }
 
 # Cleanup function (runs on EXIT, INT, TERM — NOT on kill -9)
@@ -266,7 +278,8 @@ start_vllm() {
         --tensor-parallel-size 4 \
         --max-model-len $VLLM_CONTEXT \
         --gpu-memory-utilization $VLLM_GPU_UTIL \
-        --dtype $VLLM_DTYPE"
+        --dtype $VLLM_DTYPE" \
+        --enforce-eager
     
     # Add quantization if specified
     if [ -n "$VLLM_QUANTIZATION" ]; then
@@ -392,6 +405,14 @@ run_dataset() {
     echo "Stagnation threshold: $STAGNATION_THRESHOLD"
     echo "Kick probability: $KICK_PROBABILITY"
     echo "Log: $DATASET_LOG"
+    echo "Out dir: ${DATASET_OUT_BASE}/${SUBSET}_${SPLIT}_tabu (RUN_BASE=$RUN_BASE)"
+    
+    # When using TMP: sync PD -> TMP so --resume sees previous results
+    if [ "$RUN_BASE" != "$SCRIPT_DIR" ] && [ -d "${SCRIPT_DIR}/dataset_runs" ]; then
+        echo "Syncing PD dataset_runs -> $RUN_BASE for resume..."
+        mkdir -p "$DATASET_OUT_BASE"
+        rsync -a "${SCRIPT_DIR}/dataset_runs/" "$DATASET_OUT_BASE/" 2>/dev/null || cp -r "${SCRIPT_DIR}/dataset_runs/"* "$DATASET_OUT_BASE/" 2>/dev/null || true
+    fi
     
     source .venv/bin/activate
     
@@ -404,7 +425,7 @@ run_dataset() {
     
     # Pass Tabu-specific parameters via environment or args
     .venv/bin/python run_dataset.py \
-        --csc "http://127.0.0.1:${CSC_PORT}" \
+        --csc "http://localhost:${CSC_PORT}" \
         --subset "$SUBSET" \
         --split "$SPLIT" \
         --dataset_name "$DATASET_NAME" \
@@ -416,7 +437,7 @@ run_dataset() {
         --k_after "$K" \
         --max_instances "$MAX_INSTANCES" \
         --start_at "$START_AT" \
-        --out "dataset_runs/${SUBSET}_${SPLIT}_tabu" \
+        --out "${DATASET_OUT_BASE}/${SUBSET}_${SPLIT}_tabu" \
         --max_steps "$MAX_STEPS_TABU" \
         --cache \
         --resume \
@@ -430,6 +451,14 @@ run_dataset() {
         2>&1 | tee "$DATASET_LOG"
     
     local dataset_exit=${PIPESTATUS[0]}
+    
+    # When using TMP: sync results back to PD (for resume and persistence)
+    if [ "$RUN_BASE" != "$SCRIPT_DIR" ] && [ -d "$DATASET_OUT_BASE" ]; then
+        echo "Syncing dataset_runs $RUN_BASE -> PD..."
+        mkdir -p "${SCRIPT_DIR}/dataset_runs"
+        rsync -a "$DATASET_OUT_BASE/" "${SCRIPT_DIR}/dataset_runs/" 2>/dev/null || cp -r "$DATASET_OUT_BASE/"* "${SCRIPT_DIR}/dataset_runs/" 2>/dev/null || true
+    fi
+    
     if [ $dataset_exit -ne 0 ]; then
         echo "✗ Dataset run (Tabu Search) failed (exit code: $dataset_exit)"
         return 1
