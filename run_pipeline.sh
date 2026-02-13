@@ -479,7 +479,7 @@ run_dataset() {
     echo "Config: $MINI_CONFIG"
     echo "Rounds: $ROUNDS, K: $K"
     echo "Log: $DATASET_LOG"
-    echo "Out dir: ${DATASET_OUT_BASE}/${SUBSET}_${SPLIT} (RUN_BASE=$RUN_BASE)"
+    echo "Out dir: ${DATASET_OUT_BASE} (RUN_BASE=$RUN_BASE)"
     
     if [ "$RUN_BASE" != "$SCRIPT_DIR" ] && [ -d "${SCRIPT_DIR}/dataset_runs" ]; then
         echo "Syncing PD dataset_runs -> $RUN_BASE for resume..."
@@ -509,7 +509,7 @@ run_dataset() {
         --k_after "$K" \
         --max_instances "$MAX_INSTANCES" \
         --start_at "$START_AT" \
-        --out "${DATASET_OUT_BASE}/${SUBSET}_${SPLIT}" \
+        --out "$DATASET_OUT_BASE" \
         --max_steps "$MAX_STEPS_CMA" \
         --cache \
         --resume \

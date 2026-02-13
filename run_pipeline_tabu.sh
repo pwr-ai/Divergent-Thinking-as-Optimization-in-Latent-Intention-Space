@@ -489,7 +489,7 @@ run_dataset() {
     echo "Stagnation threshold: $STAGNATION_THRESHOLD"
     echo "Kick probability: $KICK_PROBABILITY"
     echo "Log: $DATASET_LOG"
-    echo "Out dir: ${DATASET_OUT_BASE}/${SUBSET}_${SPLIT}_tabu (RUN_BASE=$RUN_BASE)${RUN_ID:+ RUN_ID=$RUN_ID}"
+    echo "Out dir: ${DATASET_OUT_BASE} (RUN_BASE=$RUN_BASE)${RUN_ID:+ RUN_ID=$RUN_ID}"
     
     # When using TMP: sync PD -> TMP so --resume sees previous results
     if [ "$RUN_BASE" != "$SCRIPT_DIR" ] && [ -d "${SCRIPT_DIR}/dataset_runs${OUT_SUFFIX}" ]; then
@@ -566,7 +566,7 @@ run_dataset() {
         --k_after "$K" \
         --max_instances "$MAX_INSTANCES" \
         --start_at "$START_AT" \
-        --out "${DATASET_OUT_BASE}/${SUBSET}_${SPLIT}_tabu" \
+        --out "$DATASET_OUT_BASE" \
         --max_steps "$MAX_STEPS_TABU" \
         --cache \
         --resume \

@@ -803,13 +803,11 @@ def main():
         print(f"[{count_run}] (idx={idx}) {instance_id} solved={status.get('solved')} best={best_score} time={status['wall_time_sec']}s" + (f" error={err}" if err else ""))
 
         # WCSS: sync to PD after each instance (survive instant kill)
-        # pd_dir must mirror the directory structure between --out parent (DATASET_OUT_BASE)
-        # and out_root, so that rsync PD <-> TMP stays consistent.
-        # e.g. --out .../verified_test_tabu  ->  out_root = .../verified_test_tabu/verified_test
-        #      --pd_dir .../dataset_runs     ->  pd_dir   = .../dataset_runs/verified_test_tabu/verified_test
+        # --pd_dir is the PD-side mirror of --out (DATASET_OUT_BASE on TMP ↔ PD).
+        # out_root = --out / {subset}_{split}, so pd_out_root = --pd_dir / {subset}_{split}.
         if args.pd_dir:
             try:
-                rel = out_root.relative_to(Path(args.out).parent)
+                rel = out_root.relative_to(Path(args.out))
             except ValueError:
                 rel = Path(out_root.name)
             pd_dir = Path(args.pd_dir) / rel
