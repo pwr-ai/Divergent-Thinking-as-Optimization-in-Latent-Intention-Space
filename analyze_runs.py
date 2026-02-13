@@ -15,7 +15,7 @@ results = {
 }
 
 # Find all run directories
-run_dirs = sorted([d for d in base_dir.iterdir() if d.is_dir() and d.name.startswith("django__")])
+run_dirs = sorted([d for d in base_dir.iterdir() if d.is_dir() and (d.name.startswith("django__") or d.name.startswith("pydata__") or d.name.startswith("astropy__") or d.name.startswith("pylint-dev__"))])
 results["total_runs"] = len(run_dirs)
 
 for run_dir in run_dirs:

@@ -697,13 +697,18 @@ def main():
     done: Set[str] = set()
     if args.resume:
         done = read_done_instance_ids(results_path)
+    # When using TMP (pd_dir set), sync to PD only at end of run; skip any instance that already has its folder
+    if args.pd_dir and out_root.is_dir():
+        for p in out_root.iterdir():
+            if p.is_dir() and not p.name.startswith("."):
+                done.add(p.name)
 
     csc = CSCClient(args.csc)
     mini_config = Path(args.mini_config)
 
     ds = load_split(args.subset, args.split)
 
-    if args.resume and done:
+    if done:
         print(f"[INFO] Resume: skipping {len(done)} already-done instance(s). Will run first instance(s) with dataset index >= {args.start_at} that are not in results.")
     else:
         print(f"[INFO] Will run instance(s) starting at dataset index {args.start_at} (first instance = index {args.start_at}).")
