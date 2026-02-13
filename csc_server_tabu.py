@@ -401,7 +401,7 @@ class Candidate(BaseModel):
 class SuggestReq(BaseModel):
     n: int = 8
     max_new_tokens: int = 120
-    do_sample: bool = False
+    do_sample: bool = True
 
 
 class SuggestResp(BaseModel):

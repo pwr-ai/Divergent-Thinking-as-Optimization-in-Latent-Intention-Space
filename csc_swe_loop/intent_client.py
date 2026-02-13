@@ -87,7 +87,7 @@ class CSCClient:
         task_id: str,
         n: int = 8,
         max_new_tokens: int = 120,
-        do_sample: bool = False,
+        do_sample: bool = True,
     ) -> Tuple[str, List[Candidate]]:
         payload = {"n": n, "max_new_tokens": max_new_tokens, "do_sample": do_sample}
         r = httpx.post(f"{self.base_url}/tasks/{task_id}/suggest", json=payload, timeout=self.timeout)
