@@ -803,7 +803,18 @@ def main():
         print(f"[{count_run}] (idx={idx}) {instance_id} solved={status.get('solved')} best={best_score} time={status['wall_time_sec']}s" + (f" error={err}" if err else ""))
 
         # WCSS: sync to PD after each instance (survive instant kill)
-        pd_dir = Path(args.pd_dir) / out_root.name if args.pd_dir else None
+        # pd_dir must mirror the directory structure between --out parent (DATASET_OUT_BASE)
+        # and out_root, so that rsync PD <-> TMP stays consistent.
+        # e.g. --out .../verified_test_tabu  ->  out_root = .../verified_test_tabu/verified_test
+        #      --pd_dir .../dataset_runs     ->  pd_dir   = .../dataset_runs/verified_test_tabu/verified_test
+        if args.pd_dir:
+            try:
+                rel = out_root.relative_to(Path(args.out).parent)
+            except ValueError:
+                rel = Path(out_root.name)
+            pd_dir = Path(args.pd_dir) / rel
+        else:
+            pd_dir = None
         _sync_to_pd(out_root, pd_dir, instance_id=instance_id)
 
     print(f"Done. ran={count_run} (start_at={args.start_at}) resume={args.resume} out={out_root}")
