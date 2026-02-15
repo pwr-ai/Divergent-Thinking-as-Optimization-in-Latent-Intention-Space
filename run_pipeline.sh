@@ -59,6 +59,7 @@ START_AT="${START_AT:-6}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 # TMPDIR overrides WORK_DIR; when set, logs and dataset_runs go there (sync back to SCRIPT_DIR at end).
+# Logs always in work dir (SCRIPT_DIR) so they persist when RUN_BASE is TMP.
 if [ -n "${TMPDIR}" ]; then
   RUN_BASE="${TMPDIR}"
 elif [ -n "${WORK_DIR}" ]; then
@@ -66,7 +67,7 @@ elif [ -n "${WORK_DIR}" ]; then
 else
   RUN_BASE="${SCRIPT_DIR}"
 fi
-LOG_DIR="${RUN_BASE}/logs"
+LOG_DIR="${SCRIPT_DIR}/logs"
 DATASET_OUT_BASE="${RUN_BASE}/dataset_runs"
 # Agent config: swebench_minimal.yaml forbids creating new files; override with MINI_CONFIG=path
 MINI_CONFIG="${MINI_CONFIG:-${SCRIPT_DIR}/csc_swe_loop/swebench_minimal.yaml}"
