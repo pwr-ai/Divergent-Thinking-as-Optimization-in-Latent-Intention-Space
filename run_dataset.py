@@ -682,6 +682,8 @@ def main():
                     help="Evaluation backend: docker (local Docker/Podman) or modal (Modal cloud, no Docker needed). Run 'modal token new' first for modal.")
     ap.add_argument("--pd_dir", default=None,
                     help="PD (persistent) directory to sync results after each instance (WCSS: survive instant kill)")
+    ap.add_argument("--bootstrap-only", action="store_true",
+                    help="Run only bootstrap phase (N attempts, eval, extract intentions, PUT to CSC); skip CMA/Tabu loop. Use with run_pipeline_bootstrap.sh for bootstrap-only experiments.")
     args = ap.parse_args()
     dataset_name = args.dataset_name or get_harness_dataset_name(args.subset)
     # Harness needs effective split (Verified has only "test", not "dev")
@@ -769,6 +771,20 @@ def main():
                     "info": next((a["info"] for a in boot["anchors"] if a["info"].get("resolved")), {}),
                     "intention": next((a["text"] for a in boot["anchors"] if a["info"].get("resolved")), None),
                 }
+            elif args.bootstrap_only:
+                # Bootstrap-only mode: no CMA/Tabu loop; set best from bootstrap attempts
+                anchors = boot.get("anchors") or []
+                if anchors:
+                    best_anchor = max(anchors, key=lambda a: float(a.get("score", 0)))
+                    status["solved"] = bool(best_anchor.get("info", {}).get("resolved", False))
+                    status["best"] = {
+                        "score": float(best_anchor.get("score", 0)),
+                        "info": best_anchor.get("info", {}),
+                        "intention": best_anchor.get("text"),
+                    }
+                else:
+                    status["solved"] = False
+                    status["best"] = None
             else:
                 loop = cma_loop_instance(
                     instance=dict(inst),
