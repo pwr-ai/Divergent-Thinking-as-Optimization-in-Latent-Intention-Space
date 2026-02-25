@@ -154,25 +154,31 @@ def main():
     instance = load_swebench_instance(args.subset, args.split, args.instance_id)
     task_context = instance["problem_statement"]
 
-    # 2) Run N attempts WITHOUT intention
-    print(f"\n--- Phase 1: Running {args.num_attempts} agent attempts (no intention) ---")
+    # 2) Run attempts one-by-one; evaluate each; stop as soon as one resolves
+    print(f"\n--- Phase 1 & 2: Run attempts (no intention), evaluate, stop if solved ---")
     max_steps = args.max_steps if args.max_steps > 0 else None
-    attempts = run_bootstrap_attempts(
-        instance=instance,
-        model_name=args.mini_model,
-        config_path=Path(args.mini_config),
-        environment_class=args.environment_class,
-        num_attempts=args.num_attempts,
-        max_steps=max_steps,
-    )
-
-    # 3) Evaluate each attempt
-    print(f"\n--- Phase 2: Evaluating patches ---")
     evaluated_attempts: List[Dict[str, Any]] = []
-    
-    for i, (patch, trace, temp) in enumerate(attempts):
+
+    for i in range(args.num_attempts):
+        temperature = 0.3 + (i * 0.3)
+        print(f"\n[ATTEMPT {i}] Running agent (temp={temperature}, max_steps={max_steps})...")
+        try:
+            result = run_mini_on_instance(
+                instance=instance,
+                intention=None,
+                model_name=args.mini_model,
+                config_path=Path(args.mini_config),
+                environment_class=args.environment_class,
+                exit_immediately=True,
+                capture_trace=True,
+                max_steps=max_steps,
+            )
+            patch, trace = (result[0], result[1]) if isinstance(result, tuple) else (result, "")
+        except Exception as e:
+            print(f"[ATTEMPT {i}] Failed: {e}")
+            patch, trace = "", f"Error: {e}"
+
         run_id = f"attempt{i}_{int(time.time())}"
-        
         if not patch:
             score, info = 0.0, {"resolved": False, "f2p": 0.0, "p2p": 0.0, "note": "empty patch"}
         else:
@@ -187,30 +193,24 @@ def main():
                 )
                 inst_res = extract_instance_result(results, args.instance_id)
                 if inst_res is None:
-                    # Debug: log what we got from harness
-                    print(f"[EVAL {i}] extract_instance_result returned None")
-                    print(f"[EVAL {i}] Results keys: {list(results.keys())}")
-                    print(f"[EVAL {i}] Results (first 500 chars): {str(results)[:500]}")
                     score, info = 0.0, {"resolved": False, "f2p": 0.0, "p2p": 0.0, "note": "no instance result"}
                 else:
                     score, info = score_from_instance_result(inst_res)
-                    print(f"[EVAL {i}] Extracted result: resolved={inst_res.get('resolved')}, f2p={inst_res.get('f2p')}, p2p={inst_res.get('p2p')}, keys={list(inst_res.keys())}")
             except Exception as e:
                 score, info = 0.0, {"resolved": False, "f2p": 0.0, "p2p": 0.0, "note": f"eval error: {e}"}
-        
+
         evaluated_attempts.append({
             "idx": i,
             "patch": patch,
             "trace": trace,
-            "temperature": temp,
+            "temperature": temperature,
             "score": float(score),
             "info": info,
         })
-        
         print(f"[ATTEMPT {i}] score={score:.3f} f2p={info.get('f2p')} p2p={info.get('p2p')} resolved={info.get('resolved')}")
-        
+
         if info.get("resolved"):
-            print("✅ Solved during bootstrap attempt! No CMA needed.")
+            print("✅ Solved during bootstrap attempt! Stopping further attempts.")
             summary = {
                 "instance_id": args.instance_id,
                 "solved_in_bootstrap": True,
@@ -220,7 +220,7 @@ def main():
             (out_dir / "bootstrap_summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
             return
 
-    # 4) Extract intentions from patches/traces using LLM
+    # 3) Extract intentions from patches/traces using LLM
     print(f"\n--- Phase 3: Extracting intentions from solutions ---")
     anchor_data: List[Dict[str, Any]] = []
     

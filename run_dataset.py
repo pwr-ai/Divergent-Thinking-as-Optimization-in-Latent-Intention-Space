@@ -303,6 +303,8 @@ def bootstrap_instance(
 
             if info.get("resolved"):
                 solved = True
+                print(f"[BOOTSTRAP] Solved at attempt {j}; stopping further attempts for this instance.")
+                break
 
         # Phase 3: Extract intentions from patches/traces using LLM
         print(f"[BOOTSTRAP] Phase 2: Extracting intentions from {len(attempts_data)} attempts")
