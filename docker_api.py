@@ -22,7 +22,7 @@ import struct
 import sys
 import urllib.parse
 
-API = "/v1.41"
+API = "/v1.44"
 _TIMEOUT = 600  # seconds; subprocess.run() in mini-swe-agent enforces its own timeout
 
 
