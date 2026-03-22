@@ -272,7 +272,7 @@ start_csc() {
     touch "$CSC_LOG"
     source .venv/bin/activate
     CSC_DTYPE="$CSC_DTYPE" CSC_QUANTIZATION="$CSC_QUANTIZATION" \
-    .venv/bin/python -m uvicorn csc_server_tabu:app --host 0.0.0.0 --port "$CSC_PORT" > "$CSC_LOG" 2>&1 &
+    .venv/bin/python -m uvicorn csc_server:app --host 0.0.0.0 --port "$CSC_PORT" > "$CSC_LOG" 2>&1 &
     CSC_PID=$!
     STARTED_CSC=1
     sleep 2

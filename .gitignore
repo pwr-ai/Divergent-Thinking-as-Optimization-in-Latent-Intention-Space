@@ -23,11 +23,13 @@ env/
 # Logs and run data (large, generated)
 logs/
 dataset_runs/
+dataset_runs_bootstrap*/
 bootstrap_runs/
 csc_runs/
 
 # Cache
 .cache/
+.env
 
 # OS
 .DS_Store
@@ -35,5 +37,9 @@ Thumbs.db
 
 # Copies / backups
 *copy*.py
+*copy*.sh
 *.bak
 *.orig
+
+# Notebooks (large, generated)
+*.ipynb

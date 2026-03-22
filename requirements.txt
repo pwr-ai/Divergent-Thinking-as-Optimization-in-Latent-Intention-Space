@@ -9,7 +9,7 @@ torch>=2.0
 numpy>=1.24
 transformers>=4.40
 
-# xRAG: Extreme Context Compression for RAG
+# xRAG: Extreme Context Compression for RAG (CSC decoder)
 git+https://github.com/Hannibal046/xRAG.git@main
 
 # LLM serving & inference
@@ -22,9 +22,8 @@ mini-swe-agent>=1.10
 datasets>=2.18
 
 # Evaluation / containerization
-docker>=7.0            # local eval backend (Docker/Podman)
-modal>=0.60            # cloud eval backend (Modal) — optional, for --eval_backend modal
-tenacity>=8.0          # retry logic for Modal sandboxes
+docker>=7.0
+tenacity>=8.0
 
 # Utilities
 pyyaml>=6.0

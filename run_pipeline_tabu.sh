@@ -410,7 +410,7 @@ start_csc() {
     source .venv/bin/activate
     
     CSC_DTYPE="$CSC_DTYPE" CSC_QUANTIZATION="$CSC_QUANTIZATION" \
-    .venv/bin/python -m uvicorn csc_server_tabu:app \
+    .venv/bin/python -m uvicorn csc_server:app \
         --host 0.0.0.0 \
         --port "$CSC_PORT" \
         > "$CSC_LOG" 2>&1 &

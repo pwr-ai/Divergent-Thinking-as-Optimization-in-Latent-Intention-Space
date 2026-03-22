@@ -1,39 +1,38 @@
 #!/usr/bin/env python
 """
-CSC Intention Server (FastAPI)
+CSC Intention Server (FastAPI) – Tabu Search Version
 
-Stateful server that:
-- accepts a "task" with anchors (seed intentions) and optional context
-- runs CMA-ES in embedding space
-- decodes CMA points into intentions via xRAG (retrieval-embedding conditioned generation)
-- returns batches of candidate intentions
-- accepts feedback scores and updates CMA-ES state (tell)
+Replaces GA with Tabu Search in embedding space:
+- Maintains a tabu list of solution fingerprints (embeddings, intentions, AST diff hashes)
+- Uses neighborhood moves instead of crossover:
+  - Local moves: x' = x + ε (directional noise towards anchors or PCA direction)
+  - Kick moves: larger jumps when stuck
+- Accepts new candidate if score >= current (not just >), crucial for plateau navigation
+- Aspiration criteria: accept tabu move if it's the best ever seen
+- Hard ban: bad intentions (score=0, empty patch) are banned forever
 
 Endpoints:
-- PUT  /tasks/{task_id}         -> set/reset task, anchors, CMA config
-- POST /tasks/{task_id}/suggest -> ask CMA-ES and decode to intentions (returns batch_id + candidates)
-- POST /tasks/{task_id}/feedback-> tell CMA-ES with (candidate_id, score)
+- PUT  /tasks/{task_id}         -> set/reset task, anchors, Tabu config
+- POST /tasks/{task_id}/suggest -> generate intentions from Tabu Search
+- POST /tasks/{task_id}/feedback-> update current solution with scores
 - GET  /tasks/{task_id}/state   -> debug state
-
-Run:
-  pip install fastapi uvicorn httpx pydantic cma torch transformers
-  uvicorn csc_server:app --host 0.0.0.0 --port 8000
 """
 
 from __future__ import annotations
 
 import asyncio
 import hashlib
-import json
+import math
 import os
+import random
 import time
 import uuid
-from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Tuple
+from collections import deque
+from dataclasses import dataclass, field
+from typing import Any, Deque, Dict, List, Optional, Set, Tuple
 
 import numpy as np
 import torch
-import cma
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 from transformers import AutoTokenizer
@@ -41,7 +40,6 @@ from transformers import AutoTokenizer
 # --- xRAG / SFR imports ---
 from xRAG.src.model import SFR, XMistralForCausalLM
 from xRAG.src.language_modeling.utils import get_retrieval_embeds, XRAG_TOKEN
-
 
 # =============================================================================
 # Globals: models (loaded on startup)
@@ -58,33 +56,82 @@ retriever_tokenizer = None
 
 
 def initialize_models() -> None:
-    """Initialize device, dtypes, and models with automatic device mapping."""
     global device, retriever_device, _dtype_llm, _dtype_retr
     global llm, llm_tokenizer, retriever, retriever_tokenizer
-    
+
     import sys
-    print("[CSC] initialize_models() called", flush=True)
+    print("[CSC-TABU] initialize_models() called", flush=True)
     sys.stdout.flush()
 
-    if torch.cuda.is_available():
-        _dtype_llm = torch.float16
-        _dtype_retr = torch.float16
-    elif getattr(torch.backends, "mps", None) and torch.backends.mps.is_available():
-        _dtype_llm = torch.float16
-        _dtype_retr = torch.float16
-    else:
+    # Get dtype from environment variable (float16, bfloat16, float32, auto)
+    csc_dtype = os.environ.get("CSC_DTYPE", "auto").lower()
+    # Get quantization from environment variable (none, 4bit, 8bit)
+    csc_quantization = os.environ.get("CSC_QUANTIZATION", "none").lower()
+    
+    # Determine dtype
+    if csc_dtype == "bfloat16":
+        _dtype_llm = torch.bfloat16
+        _dtype_retr = torch.bfloat16
+    elif csc_dtype == "float32":
         _dtype_llm = torch.float32
         _dtype_retr = torch.float32
+    elif csc_dtype == "float16":
+        _dtype_llm = torch.float16
+        _dtype_retr = torch.float16
+    else:  # auto
+        if torch.cuda.is_available():
+            _dtype_llm = torch.float16
+            _dtype_retr = torch.float16
+        elif getattr(torch.backends, "mps", None) and torch.backends.mps.is_available():
+            _dtype_llm = torch.float16
+            _dtype_retr = torch.float16
+        else:
+            _dtype_llm = torch.float32
+            _dtype_retr = torch.float32
+    
+    print(f"[CSC-TABU] Configured dtype: {csc_dtype} -> torch dtype: {_dtype_llm}")
+    print(f"[CSC-TABU] Configured quantization: {csc_quantization}")
 
     llm_name_or_path = os.environ.get("CSC_XRAG_LLM", "Hannibal046/xrag-7b")
     retriever_name_or_path = os.environ.get("CSC_XRAG_RETR", "Salesforce/SFR-Embedding-Mistral")
 
-    print(f"[CSC] Loading LLM: {llm_name_or_path} (dtype={_dtype_llm}) device_map=auto")
+    # Build loading kwargs based on quantization
+    llm_load_kwargs = {
+        "low_cpu_mem_usage": True,
+        "device_map": "auto",
+    }
+    
+    if csc_quantization == "4bit":
+        try:
+            from transformers import BitsAndBytesConfig
+            llm_load_kwargs["quantization_config"] = BitsAndBytesConfig(
+                load_in_4bit=True,
+                bnb_4bit_compute_dtype=_dtype_llm,
+                bnb_4bit_use_double_quant=True,
+                bnb_4bit_quant_type="nf4",
+            )
+            print("[CSC-TABU] Using 4-bit quantization (bitsandbytes NF4)")
+        except ImportError:
+            print("[CSC-TABU] WARNING: bitsandbytes not available, falling back to no quantization")
+            llm_load_kwargs["torch_dtype"] = _dtype_llm
+    elif csc_quantization == "8bit":
+        try:
+            from transformers import BitsAndBytesConfig
+            llm_load_kwargs["quantization_config"] = BitsAndBytesConfig(
+                load_in_8bit=True,
+            )
+            print("[CSC-TABU] Using 8-bit quantization (bitsandbytes)")
+        except ImportError:
+            print("[CSC-TABU] WARNING: bitsandbytes not available, falling back to no quantization")
+            llm_load_kwargs["torch_dtype"] = _dtype_llm
+    else:
+        # No quantization - use specified dtype
+        llm_load_kwargs["torch_dtype"] = _dtype_llm
+
+    print(f"[CSC-TABU] Loading LLM: {llm_name_or_path} (dtype={_dtype_llm}, quant={csc_quantization}) device_map=auto")
     _llm = XMistralForCausalLM.from_pretrained(
         llm_name_or_path,
-        torch_dtype=_dtype_llm,
-        low_cpu_mem_usage=True,
-        device_map="auto",
+        **llm_load_kwargs,
     ).eval()
 
     _llm_tokenizer = AutoTokenizer.from_pretrained(
@@ -95,15 +142,12 @@ def initialize_models() -> None:
     )
     _llm.set_xrag_token_id(_llm_tokenizer.convert_tokens_to_ids(XRAG_TOKEN))
 
-    # Patch prepare_inputs_embeds (as in your script)
     def patched_prepare_inputs_embeds(input_ids, retrieval_embeds):
         inputs_embeds = _llm.model.embed_tokens(input_ids)
         retrieval_embeds = retrieval_embeds.view(-1, _llm.retriever_hidden_size)
-
         num_xrag_tokens = torch.sum(input_ids == _llm.xrag_token_id).item()
         num_retrieval_embeds = retrieval_embeds.shape[0]
         assert num_xrag_tokens == num_retrieval_embeds, (num_xrag_tokens, num_retrieval_embeds)
-
         retrieval_embeds = _llm.projector(retrieval_embeds.to(inputs_embeds.dtype))
         retrieval_embeds = retrieval_embeds.to(inputs_embeds.device)
         inputs_embeds[input_ids == _llm.xrag_token_id] = retrieval_embeds
@@ -111,11 +155,9 @@ def initialize_models() -> None:
 
     _llm.prepare_inputs_embeds = patched_prepare_inputs_embeds
 
-    # Infer device for input tensors (embedding layer)
     if hasattr(_llm, "hf_device_map") and _llm.hf_device_map:
-        embed_layer_names = ["model.embed_tokens", "embed_tokens"]
         device_candidate = None
-        for name in embed_layer_names:
+        for name in ["model.embed_tokens", "embed_tokens"]:
             if name in _llm.hf_device_map:
                 device_candidate = torch.device(_llm.hf_device_map[name])
                 break
@@ -133,9 +175,9 @@ def initialize_models() -> None:
                 "cuda:0" if torch.cuda.is_available() else "cpu"
             )
 
-    print(f"[CSC] Using device for LLM inputs: {_device}")
+    print(f"[CSC-TABU] Using device for LLM inputs: {_device}")
 
-    print(f"[CSC] Loading retriever: {retriever_name_or_path} (dtype={_dtype_retr}) device_map=auto")
+    print(f"[CSC-TABU] Loading retriever: {retriever_name_or_path} (dtype={_dtype_retr}) device_map=auto")
     _retriever = SFR.from_pretrained(
         retriever_name_or_path,
         torch_dtype=_dtype_retr,
@@ -148,8 +190,8 @@ def initialize_models() -> None:
     else:
         _retriever_device = _retriever.device if hasattr(_retriever, "device") else _device
 
-    print(f"[CSC] Using device for retriever inputs: {_retriever_device}")
-    print("[CSC] Models loaded.")
+    print(f"[CSC-TABU] Using device for retriever inputs: {_retriever_device}")
+    print("[CSC-TABU] Models loaded.")
 
     llm = _llm
     llm_tokenizer = _llm_tokenizer
@@ -168,11 +210,10 @@ Question: {prompt} [/INST] Propose fix intention based on the background. The an
 
 
 def embed_text(documents: List[str]) -> torch.Tensor:
-    """Return retrieval embeddings tensor shape [B, D] for the given documents."""
     with torch.no_grad():
         toks = retriever_tokenizer(
             documents,
-            max_length=1024,
+            max_length=512,
             padding=True,
             truncation=True,
             return_tensors="pt",
@@ -191,10 +232,8 @@ def generate_from_embedding(
     max_new_tokens: int = 120,
     do_sample: bool = False,
 ) -> str:
-    """Use xRAG-7B with a single retrieval embedding to generate text."""
     if embedding.dim() == 1:
         embedding = embedding.unsqueeze(0)
-
     embedding = embedding.to(device)
 
     formatted_prompt = rag_template.format_map(dict(document=XRAG_TOKEN, prompt=prompt))
@@ -215,91 +254,83 @@ def generate_from_embedding(
     return text.split("The answer is:", 1)[-1].strip()
 
 
-def refine_intention_for_task(
-    intention: str,
-    task_context: str,
-    max_new_tokens: int = 300,
-    do_sample: bool = False,
-) -> str:
-    """Refine/adjust an intention to fit a given task context. Include code details."""
-    # Extract only bug description, not instructions
-    ctx = extract_bug_description(task_context)
-    # Limit to 3000 chars for prompt
-    ctx = ctx[:3000] if len(ctx) > 3000 else ctx
-
-    sys_msg = """Adapt the fix intention to this specific bug context.
-
-Your output MUST include:
-1. What causes the bug (1-2 sentences)
-2. The fix approach with specific file/function names
-3. Code snippet showing the key change
-
-Be detailed and specific. Include actual code."""
-
-    user_msg = f"""Bug Context:
-{ctx}
-
-Generic Intention:
-{intention}
-
-Specific detailed fix plan:"""
-
-    formatted_prompt = f"[INST] {sys_msg}\n\n{user_msg} [/INST]"
-
-    encoded = llm_tokenizer(formatted_prompt, return_tensors="pt")
-    input_ids = encoded.input_ids.to(device)
-    attention_mask = encoded.attention_mask.to(device)
-    input_length = input_ids.shape[1]
-
-    with torch.no_grad():
-        out = llm.generate(
-            input_ids=input_ids,
-            attention_mask=attention_mask,
-            do_sample=do_sample,
-            max_new_tokens=max_new_tokens,
-            pad_token_id=llm_tokenizer.pad_token_id,
-        )
-
-    generated_ids = out[0][input_length:]
-    s = llm_tokenizer.decode(generated_ids, skip_special_tokens=True).strip()
-    return s.strip()
-
-
 def extract_bug_description(task_context: str) -> str:
-    """
-    Extract only the bug description from task_context, removing instructions.
-    Looks for <pr_description>...</pr_description> or extracts content before <instructions>.
-    """
+    """Extract only the bug description from task_context, removing instructions."""
     if not task_context:
         return "Bug context not provided."
     
-    # Try to extract <pr_description> section
     if "<pr_description>" in task_context and "</pr_description>" in task_context:
         start = task_context.find("<pr_description>") + len("<pr_description>")
         end = task_context.find("</pr_description>")
         if start > len("<pr_description>") and end > start:
             return task_context[start:end].strip()
     
-    # If no pr_description tags, extract everything before <instructions>
     if "<instructions>" in task_context:
         end = task_context.find("<instructions>")
         return task_context[:end].strip()
     
-    # Fallback: return first 2000 chars (should contain the bug description)
     return task_context[:2000].strip()
 
 
 def looks_like_junk(s: str) -> bool:
-    """Check if intention is empty or gibberish. Code is ALLOWED now."""
     s = (s or "").strip()
     if not s:
         return True
     if len(s) < 10:
         return True
-    # Only reject if it's just repeated characters or obvious garbage
     if len(set(s)) < 5:
         return True
     return False
+
+
+def _normalize_intention(s: str) -> str:
+    return " ".join((s or "").strip().lower().split())
+
+
+# =============================================================================
+# Solution fingerprinting for tabu list
+# =============================================================================
+@dataclass
+class SolutionFingerprint:
+    """
+    Comprehensive fingerprint of a solution for tabu list.
+    Includes multiple levels of identification to catch "paraphrases".
+    """
+    z_hash: str  # embedding hash
+    i_hash: str  # intention text hash
+    # Additional fingerprint components (populated from feedback aux data)
+    fix_mechanism: Optional[str] = None  # e.g., "__eq__/__hash__/__lt__"
+    touched_files: Optional[Tuple[str, ...]] = None  # sorted tuple of file paths
+    key_symbols: Optional[Tuple[str, ...]] = None  # key class/function names
+    ast_diff_hash: Optional[str] = None  # hash of AST diff if available
+    
+    def matches(self, other: 'SolutionFingerprint', strict: bool = False) -> bool:
+        """Check if two fingerprints represent the same solution."""
+        # Always match on embedding hash
+        if self.z_hash == other.z_hash:
+            return True
+        # Always match on intention hash
+        if self.i_hash == other.i_hash:
+            return True
+        
+        if strict:
+            # In strict mode, also check semantic fingerprints
+            if self.fix_mechanism and other.fix_mechanism:
+                if self.fix_mechanism == other.fix_mechanism:
+                    return True
+            if self.touched_files and other.touched_files:
+                if self.touched_files == other.touched_files:
+                    return True
+            if self.ast_diff_hash and other.ast_diff_hash:
+                if self.ast_diff_hash == other.ast_diff_hash:
+                    return True
+        
+        return False
+    
+    def to_key(self) -> str:
+        """Generate a compact key for dict storage."""
+        # Primary: use intention hash (more stable than embedding)
+        return self.i_hash
 
 
 # =============================================================================
@@ -311,38 +342,52 @@ class Anchor(BaseModel):
     weight: float = 1.0
 
 
-class CMAConfig(BaseModel):
-    """
-    CMA in *embedding space*.
-    dim can be omitted; if omitted we infer it from the retriever embedding size.
-    """
+class TabuConfig(BaseModel):
     dim: Optional[int] = None
-    sigma0: float = 10.0  # Very large sigma for maximum diversity in embedding space
-    popsize: int = 32
     seed: int = 123
-    # Bounds for CMA-ES in pycma are typically [lower, upper] scalars or per-dim arrays.
-    bounds: Optional[List[float]] = None  # e.g. [-3.0, 3.0]
-    maxiter: Optional[int] = None
+
+    # Tabu list parameters
+    tabu_tenure: int = 50  # how long a solution stays tabu
+    max_tabu_size: int = 1000  # max size of tabu list
+    use_strict_fingerprint: bool = False  # use semantic fingerprints (files, symbols)
+    
+    # Neighborhood parameters
+    sigma_local: float = 0.5  # std for local moves
+    sigma_kick: float = 3.0  # std for kick moves
+    
+    # Direction bias (towards anchors or along PCA)
+    anchor_attraction: float = 0.3  # probability of biasing towards an anchor
+    pca_bias: float = 0.2  # probability of biasing along population PCA
+    
+    # Kick parameters (diversification)
+    stagnation_threshold: int = 10  # iterations without improvement before kick
+    kick_probability: float = 0.15  # base probability of kick move
+    kick_intensity: float = 2.0  # multiplier for kick magnitude
+    
+    # Aspiration criteria
+    use_aspiration: bool = True  # allow tabu moves if they're best ever
+    
+    # Acceptance criteria (key difference from classic tabu)
+    accept_equal: bool = True  # accept if score >= current (not just >)
+    
+    # Memory and banning
+    max_banned: int = 10000
+    max_seen_intentions: int = 10000
+    ban_threshold: float = 0.001
 
 
 class TaskSpec(BaseModel):
-    """
-    task_context: the bug/issue context used in prompts (your BENCHMARK_TASK or agent-provided).
-    intention_prompt: optional override prompt to generate raw intentions from embeddings.
-    """
     task_context: str = ""
     anchors: List[Anchor] = Field(default_factory=list)
     use_refinement: bool = False
     intention_prompt: Optional[str] = None
-    # Novelty bonus: adds diversity component to score
-    novelty_lambda: float = 0.0  # weight for novelty component: score_total = score_task + λ * novelty
-    novelty_mode: str = "batch_distance"  # "anchor_distance" or "batch_distance"
-    novelty_decay_tau: float = 0.0  # if >0, novelty weight decays: λ_eff = λ * 0.5^(iter_updates/tau). 0 = no decay.
+    # Initial solution from bootstrap (optional)
+    initial_solution: Optional[Dict[str, Any]] = None
 
 
 class SetTaskReq(BaseModel):
     task: TaskSpec
-    cma: CMAConfig
+    tabu: TabuConfig
 
 
 class Candidate(BaseModel):
@@ -354,10 +399,9 @@ class Candidate(BaseModel):
 
 
 class SuggestReq(BaseModel):
-    n: int = 16
-    # generation params
+    n: int = 8
     max_new_tokens: int = 120
-    do_sample: bool = False
+    do_sample: bool = True
 
 
 class SuggestResp(BaseModel):
@@ -375,7 +419,7 @@ class Evaluation(BaseModel):
 class FeedbackReq(BaseModel):
     batch_id: str
     evaluations: List[Evaluation]
-    maximize: bool = True  # if True, CMA cost = -score
+    maximize: bool = True
 
 
 class FeedbackResp(BaseModel):
@@ -388,21 +432,81 @@ class FeedbackResp(BaseModel):
 # Server state
 # =============================================================================
 @dataclass
+class TabuEntry:
+    """Entry in the tabu list with expiration."""
+    fingerprint: SolutionFingerprint
+    added_at: int  # iteration when added
+    expires_at: int  # iteration when it expires
+    score: float  # score when it was tabu'd
+
+
+@dataclass
 class PendingCandidate:
     x: np.ndarray
     z_hash: str
     intention_raw: str
     intention: str
+    i_hash: str
     meta: Dict[str, Any]
+    fingerprint: SolutionFingerprint
+
+
+@dataclass
+class CurrentSolution:
+    """The current solution in Tabu Search."""
+    x: np.ndarray
+    score: float
+    z_hash: str
+    i_hash: str
+    intention: str
+    intention_raw: str
+    meta: Dict[str, Any]
+    fingerprint: SolutionFingerprint
 
 
 class TaskState:
-    def __init__(self, spec: TaskSpec, cfg: CMAConfig):
+    def __init__(self, spec: TaskSpec, cfg: TabuConfig):
         self.spec = spec
         self.cfg = cfg
         self.lock = asyncio.Lock()
 
-        # infer dim from retriever embeddings if not provided
+        random.seed(cfg.seed)
+        np.random.seed(cfg.seed)
+
+        # Current solution (single solution focus for Tabu Search)
+        self.current: Optional[CurrentSolution] = None
+        
+        # Best solution ever seen (for aspiration)
+        self.best_ever: Optional[CurrentSolution] = None
+        self.best_score: Optional[float] = None
+        self.best_candidate: Optional[Dict[str, Any]] = None
+        
+        # Tabu list
+        self.tabu_list: Dict[str, TabuEntry] = {}  # key -> TabuEntry
+        self.tabu_fifo: Deque[str] = deque()
+        
+        # History for PCA computation
+        self.solution_history: List[np.ndarray] = []
+        self.max_history: int = 100
+        
+        # Stagnation tracking
+        self.iterations_without_improvement: int = 0
+        
+        # Pending candidates and tracking
+        self.pending: Dict[str, Dict[str, PendingCandidate]] = {}
+        self.decode_cache: Dict[str, Tuple[str, str, str]] = {}
+
+        # Banned embeddings and seen intentions (hard bans)
+        self.banned_z: Dict[str, float] = {}
+        self.banned_z_fifo: Deque[str] = deque()
+        self.seen_i: Dict[str, float] = {}
+        self.seen_i_fifo: Deque[str] = deque()
+
+        self.iter_updates = 0
+        self.total_evals = 0
+        self.last_update_ts = time.time()
+
+        # Infer dim
         inferred_dim = None
         if spec.anchors:
             with torch.no_grad():
@@ -411,135 +515,172 @@ class TaskState:
 
         dim = cfg.dim or inferred_dim
         if dim is None:
-            raise ValueError("Cannot infer dim: provide cma.dim or provide at least 1 anchor.")
+            raise ValueError("Cannot infer dim: provide tabu.dim or provide at least 1 anchor.")
+        self.dim = int(dim)
 
-        self.dim = dim
-
-        # CMA init at mean=anchor centroid (in embedding space) if anchors provided; else zeros
-        # Also store anchor embeddings for novelty calculation
+        # Compute anchor embeddings
         if spec.anchors:
             texts = [a.text for a in spec.anchors]
             weights = np.array([a.weight for a in spec.anchors], dtype=np.float64)
             weights = weights / (weights.sum() if weights.sum() > 0 else 1.0)
-
             with torch.no_grad():
-                E = embed_text(texts).detach().to("cpu").numpy().astype(np.float64)  # [A,D]
+                E = embed_text(texts).detach().float().to("cpu").numpy().astype(np.float64)
             x0 = (E * weights[:, None]).sum(axis=0)
-            # Store anchor embeddings for novelty calculation
-            self.anchor_embeddings = E  # [A, D]
+            self.anchor_embeddings = E
         else:
-            x0 = np.zeros(dim, dtype=np.float64)
+            x0 = np.zeros(self.dim, dtype=np.float64)
             self.anchor_embeddings = None
-
-        opts: Dict[str, Any] = {"popsize": cfg.popsize, "seed": cfg.seed}
-        if cfg.maxiter is not None:
-            opts["maxiter"] = cfg.maxiter
-        if cfg.bounds is not None:
-            opts["bounds"] = cfg.bounds
-
-        self.es = cma.CMAEvolutionStrategy(x0, cfg.sigma0, opts)
-
-        # pending batches: batch_id -> candidate_id -> PendingCandidate
-        self.pending: Dict[str, Dict[str, PendingCandidate]] = {}
-
-        # basic cache to avoid regenerating for same z (hash)
-        self.cache: Dict[str, Tuple[str, str]] = {}  # z_hash -> (raw, refined)
-
-        # stats
-        self.iter_updates = 0
-        self.best_score = None
-        self.best_candidate = None
-        self.last_update_ts = time.time()
-
-    def _update_popsize(self, new_popsize: int) -> None:
-        """
-        Update CMA-ES popsize while preserving optimization state.
-        Reinitializes CMA-ES with new popsize, preserving mean and sigma.
-        """
-        if self.es.popsize == new_popsize:
-            return
+        self.x0 = x0.astype(np.float64)
         
-        # Save current state
-        x0 = self.es.mean
-        sigma0 = self.es.sigma
-        
-        # Reinitialize with new popsize
-        opts: Dict[str, Any] = {"popsize": new_popsize, "seed": self.cfg.seed}
-        if self.cfg.maxiter is not None:
-            opts["maxiter"] = self.cfg.maxiter
-        if self.cfg.bounds is not None:
-            opts["bounds"] = self.cfg.bounds
-        
-        self.es = cma.CMAEvolutionStrategy(x0, sigma0, opts)
-        # Restore iteration count (approximate, since we reinitialized)
-        # Note: This is a simplification - full state restoration would be more complex
-
-    def _compute_novelty(
-        self, 
-        z: np.ndarray, 
-        other_z_in_batch: List[np.ndarray],
-        mode: str
-    ) -> float:
-        """
-        Compute novelty score for a candidate z.
-        
-        Args:
-            z: candidate embedding vector [D]
-            other_z_in_batch: list of other candidate embeddings in the same batch
-            mode: "anchor_distance" or "batch_distance"
-        
-        Returns:
-            novelty score (higher = more novel/diverse)
-        """
-        if mode == "anchor_distance":
-            # Novelty = min cosine distance from anchors (higher distance = more novel)
-            if self.anchor_embeddings is None or len(self.anchor_embeddings) == 0:
-                return 0.0
+        # Initialize from bootstrap solution if provided
+        if spec.initial_solution:
+            self._init_from_bootstrap(spec.initial_solution)
+        elif spec.anchors:
+            # Initialize current solution from best anchor
+            best_anchor = max(spec.anchors, key=lambda a: a.weight)
+            idx = [a.id for a in spec.anchors].index(best_anchor.id)
+            init_x = self.anchor_embeddings[idx].copy()
+            intention = best_anchor.text.strip()
+            z_hash = self._hash_z(init_x)
+            i_hash = self._hash_intention(intention)
+            fingerprint = SolutionFingerprint(z_hash=z_hash, i_hash=i_hash)
             
-            # Normalize z and anchor embeddings for cosine distance
-            z_norm = z / (np.linalg.norm(z) + 1e-10)
-            anchor_norms = self.anchor_embeddings / (
-                np.linalg.norm(self.anchor_embeddings, axis=1, keepdims=True) + 1e-10
+            self.current = CurrentSolution(
+                x=init_x,
+                score=float(best_anchor.weight),
+                z_hash=z_hash,
+                i_hash=i_hash,
+                intention=intention,
+                intention_raw=intention,
+                meta={"op": "init_anchor", "anchor_id": best_anchor.id},
+                fingerprint=fingerprint,
             )
-            
-            # Cosine similarity (1 - cosine_distance)
-            cosines = np.dot(anchor_norms, z_norm)  # [A]
-            # Cosine distance = 1 - cosine similarity
-            distances = 1.0 - cosines
-            # Novelty = minimum distance (how far from closest anchor)
-            return float(np.min(distances))
-        
-        elif mode == "batch_distance":
-            # Novelty = minimum distance from other candidates in batch
-            if len(other_z_in_batch) == 0:
-                return 1.0  # If alone in batch, maximum novelty
-            
-            # Normalize for cosine distance
-            z_norm = z / (np.linalg.norm(z) + 1e-10)
-            other_norms = np.array([
-                z_other / (np.linalg.norm(z_other) + 1e-10) 
-                for z_other in other_z_in_batch
-            ])  # [N, D]
-            
-            # Cosine similarities
-            cosines = np.dot(other_norms, z_norm)  # [N]
-            # Cosine distance = 1 - cosine similarity
-            distances = 1.0 - cosines
-            # Novelty = minimum distance (how far from closest other candidate)
-            return float(np.min(distances))
-        
-        else:
-            raise ValueError(f"Unknown novelty_mode: {mode}")
+            self.best_ever = self.current
+            self.best_score = self.current.score
+            self.best_candidate = self._solution_to_dict(self.current)
+            self.solution_history.append(init_x.copy())
 
+    def _init_from_bootstrap(self, init_sol: Dict[str, Any]) -> None:
+        """Initialize from a bootstrap solution."""
+        # Extract embedding if provided, otherwise use x0
+        if "z" in init_sol and init_sol["z"]:
+            init_x = np.array(init_sol["z"], dtype=np.float64)
+        else:
+            init_x = self.x0.copy()
+        
+        intention = init_sol.get("intention", "").strip()
+        intention_raw = init_sol.get("intention_raw", intention)
+        score = float(init_sol.get("score", 0.0))
+        
+        z_hash = self._hash_z(init_x)
+        i_hash = self._hash_intention(intention)
+        fingerprint = SolutionFingerprint(z_hash=z_hash, i_hash=i_hash)
+        
+        # Add semantic fingerprint if available
+        aux = init_sol.get("aux", {})
+        if aux:
+            if "fix_mechanism" in aux:
+                fingerprint.fix_mechanism = aux["fix_mechanism"]
+            if "touched_files" in aux:
+                fingerprint.touched_files = tuple(sorted(aux["touched_files"]))
+            if "key_symbols" in aux:
+                fingerprint.key_symbols = tuple(sorted(aux["key_symbols"]))
+            if "ast_diff_hash" in aux:
+                fingerprint.ast_diff_hash = aux["ast_diff_hash"]
+        
+        self.current = CurrentSolution(
+            x=init_x,
+            score=score,
+            z_hash=z_hash,
+            i_hash=i_hash,
+            intention=intention,
+            intention_raw=intention_raw,
+            meta={"op": "init_bootstrap", **init_sol.get("meta", {})},
+            fingerprint=fingerprint,
+        )
+        self.best_ever = self.current
+        self.best_score = score
+        self.best_candidate = self._solution_to_dict(self.current)
+        self.solution_history.append(init_x.copy())
+        print(f"[CSC-TABU] Initialized from bootstrap: score={score}, intention={intention[:50]}...")
+
+    def _solution_to_dict(self, sol: CurrentSolution) -> Dict[str, Any]:
+        return {
+            "score": float(sol.score),
+            "intention": sol.intention,
+            "intention_raw": sol.intention_raw,
+            "z_hash": sol.z_hash,
+            "i_hash": sol.i_hash,
+            "meta": sol.meta,
+        }
+
+    # ---------------- hashing & bookkeeping ----------------
     def _hash_z(self, x: np.ndarray) -> str:
-        # float64 -> stable bytes. You can quantize if needed.
         b = np.asarray(x, dtype=np.float32).tobytes()
         return hashlib.sha256(b).hexdigest()
 
+    def _hash_intention(self, intention: str) -> str:
+        return hashlib.sha256(_normalize_intention(intention).encode("utf-8")).hexdigest()
+
+    def _remember_fifo(self, d: Dict[str, float], fifo: Deque[str], key: str, maxlen: int) -> None:
+        if key in d:
+            return
+        d[key] = time.time()
+        fifo.append(key)
+        while len(fifo) > maxlen:
+            old = fifo.popleft()
+            d.pop(old, None)
+
+    def _ban(self, z_hash: str, i_hash: Optional[str] = None) -> None:
+        self._remember_fifo(self.banned_z, self.banned_z_fifo, z_hash, self.cfg.max_banned)
+        if i_hash:
+            self._remember_fifo(self.seen_i, self.seen_i_fifo, i_hash, self.cfg.max_seen_intentions)
+
+    # ---------------- Tabu list management ----------------
+    def _add_to_tabu(self, fingerprint: SolutionFingerprint, score: float) -> None:
+        """Add a solution to the tabu list."""
+        key = fingerprint.to_key()
+        entry = TabuEntry(
+            fingerprint=fingerprint,
+            added_at=self.iter_updates,
+            expires_at=self.iter_updates + self.cfg.tabu_tenure,
+            score=score,
+        )
+        self.tabu_list[key] = entry
+        self.tabu_fifo.append(key)
+        
+        # Enforce max size
+        while len(self.tabu_fifo) > self.cfg.max_tabu_size:
+            old_key = self.tabu_fifo.popleft()
+            self.tabu_list.pop(old_key, None)
+    
+    def _is_tabu(self, fingerprint: SolutionFingerprint) -> bool:
+        """Check if a solution is tabu."""
+        key = fingerprint.to_key()
+        if key not in self.tabu_list:
+            return False
+        
+        entry = self.tabu_list[key]
+        # Check if expired
+        if entry.expires_at <= self.iter_updates:
+            del self.tabu_list[key]
+            return False
+        
+        # Check strict fingerprint matching if enabled
+        if self.cfg.use_strict_fingerprint:
+            return entry.fingerprint.matches(fingerprint, strict=True)
+        
+        return True
+    
+    def _cleanup_expired_tabu(self) -> None:
+        """Remove expired entries from tabu list."""
+        expired = [k for k, v in self.tabu_list.items() if v.expires_at <= self.iter_updates]
+        for k in expired:
+            del self.tabu_list[k]
+
+    # ---------------- prompt / decode ----------------
     def _default_intention_prompt(self) -> str:
-        # Extract only bug description (pr_description), not instructions
         ctx = extract_bug_description(self.spec.task_context)
-        # Keep it simple: this prompt is what xRAG answers to, conditioned on embedding.
         return f"""Describe in ONE sentence the core fix approach for this bug.
 
 Rules:
@@ -552,175 +693,391 @@ Bug Context:
 
 Core fix approach (one sentence):"""
 
-    def _decode_candidate(self, x: np.ndarray, max_new_tokens: int, do_sample: bool) -> Tuple[str, str]:
-        """
-        Convert CMA point x (embedding space) -> raw intention (xRAG) -> refined intention (optional).
-        Returns (raw, refined)
-        """
+    def _decode_candidate(self, x: np.ndarray, max_new_tokens: int, do_sample: bool) -> Tuple[str, str, str, str]:
         z_hash = self._hash_z(x)
-        if z_hash in self.cache:
-            return self.cache[z_hash]
+        if z_hash in self.decode_cache:
+            raw, refined, i_hash = self.decode_cache[z_hash]
+            return z_hash, raw, refined, i_hash
 
         emb = torch.tensor(x, device=device, dtype=_dtype_retr)
-
         prompt = self.spec.intention_prompt or self._default_intention_prompt()
-        raw = generate_from_embedding(
-            emb,
-            prompt,
-            max_new_tokens=max_new_tokens,
-            do_sample=do_sample,
-        ).strip()
-
-        # Keep more context to preserve diversity - don't truncate to first sentence
-        # This allows different embeddings to generate different intentions
-        raw = raw.strip()
+        try:
+            raw = generate_from_embedding(emb, prompt, max_new_tokens=max_new_tokens, do_sample=do_sample).strip()
+        except Exception as e:
+            # do_sample=True can trigger CUDA assert when probs have nan/inf (torch.multinomial)
+            err_msg = str(e).lower()
+            if any(k in err_msg for k in ("multinomial", "probability", "assert", "cuda", "device-side")):
+                raw = generate_from_embedding(emb, prompt, max_new_tokens=max_new_tokens, do_sample=False).strip()
+            else:
+                raise
 
         if looks_like_junk(raw):
-            # hard fallback: short generic (still deterministic)
             raw = "Propose a minimal, targeted logic change to prevent the false positive rule trigger."
 
         refined = raw
-        if self.spec.use_refinement and self.spec.task_context.strip():
-            refined = refine_intention_for_task(raw, self.spec.task_context).strip()
-            if ". " in refined:
-                refined = refined.split(". ")[0].strip() + "."
-            refined = refined.strip()
+        i_hash = self._hash_intention(refined)
+        self.decode_cache[z_hash] = (raw, refined, i_hash)
+        return z_hash, raw, refined, i_hash
 
-        self.cache[z_hash] = (raw, refined)
-        return raw, refined
+    # ---------------- Neighborhood operators ----------------
+    def _compute_pca_direction(self) -> Optional[np.ndarray]:
+        """Compute principal direction from solution history."""
+        if len(self.solution_history) < 3:
+            return None
+        
+        history = np.array(self.solution_history[-self.max_history:])
+        mean = history.mean(axis=0)
+        centered = history - mean
+        
+        try:
+            # SVD to get principal direction
+            U, S, Vh = np.linalg.svd(centered, full_matrices=False)
+            return Vh[0]  # First principal component
+        except Exception:
+            return None
+    
+    def _get_anchor_direction(self, current_x: np.ndarray) -> Optional[np.ndarray]:
+        """Get direction towards a random anchor."""
+        if self.anchor_embeddings is None or len(self.anchor_embeddings) == 0:
+            return None
+        
+        # Pick random anchor
+        idx = random.randint(0, len(self.anchor_embeddings) - 1)
+        anchor = self.anchor_embeddings[idx]
+        
+        direction = anchor - current_x
+        norm = np.linalg.norm(direction)
+        if norm > 1e-8:
+            return direction / norm
+        return None
+    
+    def _make_neighbor(self, current_x: np.ndarray, is_kick: bool = False) -> Tuple[np.ndarray, Dict[str, Any]]:
+        """Generate a neighbor solution using various strategies."""
+        meta: Dict[str, Any] = {}
+        
+        sigma = self.cfg.sigma_kick if is_kick else self.cfg.sigma_local
+        if is_kick:
+            sigma *= self.cfg.kick_intensity
+        
+        # Base noise
+        noise = np.random.normal(0.0, sigma, size=(self.dim,)).astype(np.float64)
+        
+        # Apply directional bias
+        direction_type = "random"
+        
+        r = random.random()
+        if r < self.cfg.anchor_attraction:
+            # Bias towards anchor
+            anchor_dir = self._get_anchor_direction(current_x)
+            if anchor_dir is not None:
+                # Mix noise with anchor direction
+                anchor_strength = random.uniform(0.3, 0.7) * sigma
+                noise = noise * 0.5 + anchor_dir * anchor_strength
+                direction_type = "anchor"
+        elif r < self.cfg.anchor_attraction + self.cfg.pca_bias:
+            # Bias along PCA direction
+            pca_dir = self._compute_pca_direction()
+            if pca_dir is not None:
+                # Move along or against PCA
+                pca_strength = random.uniform(0.3, 0.7) * sigma
+                if random.random() < 0.5:
+                    pca_strength = -pca_strength
+                noise = noise * 0.5 + pca_dir * pca_strength
+                direction_type = "pca"
+        
+        new_x = current_x + noise
+        
+        meta.update({
+            "op": "kick" if is_kick else "local_move",
+            "sigma": float(sigma),
+            "direction_type": direction_type,
+            "stagnation": self.iterations_without_improvement,
+        })
+        
+        return new_x.astype(np.float64), meta
+
+    def _should_kick(self) -> bool:
+        """Determine if we should do a kick move."""
+        # Always kick if stagnating
+        if self.iterations_without_improvement >= self.cfg.stagnation_threshold:
+            return True
+        
+        # Random kick with increasing probability based on stagnation
+        base_prob = self.cfg.kick_probability
+        stag_bonus = 0.02 * self.iterations_without_improvement
+        return random.random() < (base_prob + stag_bonus)
+
+    def _try_generate_candidate(
+        self,
+        max_new_tokens: int,
+        do_sample: bool,
+        attempt_limit: int = 15,
+    ) -> Tuple[np.ndarray, str, str, str, str, Dict[str, Any], SolutionFingerprint]:
+        """Generate a candidate solution using Tabu Search neighborhood."""
+        
+        # Get current position (or x0 if no current solution)
+        if self.current is not None:
+            current_x = self.current.x
+        else:
+            current_x = self.x0
+        
+        is_kick = self._should_kick()
+        
+        for attempt in range(attempt_limit):
+            x, meta = self._make_neighbor(current_x, is_kick=is_kick)
+            z_hash, raw, refined, i_hash = self._decode_candidate(x, max_new_tokens=max_new_tokens, do_sample=do_sample)
+            
+            fingerprint = SolutionFingerprint(z_hash=z_hash, i_hash=i_hash)
+            
+            # Check hard bans
+            if z_hash in self.banned_z:
+                continue
+            if i_hash in self.seen_i:
+                continue
+            if looks_like_junk(refined):
+                continue
+            
+            # Check tabu status
+            is_tabu_candidate = self._is_tabu(fingerprint)
+            
+            if is_tabu_candidate:
+                # Check aspiration: allow if would be best ever
+                if self.cfg.use_aspiration and self.best_score is not None:
+                    # We don't know the score yet, so we can't apply aspiration here
+                    # We'll handle aspiration in feedback when we know the score
+                    meta["tabu_status"] = "tabu_pending_aspiration"
+                else:
+                    # Skip this candidate
+                    continue
+            else:
+                meta["tabu_status"] = "not_tabu"
+
+            self._remember_fifo(self.seen_i, self.seen_i_fifo, i_hash, self.cfg.max_seen_intentions)
+            
+            meta.update({
+                "z_hash": z_hash,
+                "i_hash": i_hash,
+                "ts": time.time(),
+                "attempt": attempt,
+                "is_kick": is_kick,
+            })
+            return x, z_hash, raw, refined, i_hash, meta, fingerprint
+
+        # Fallback: random jump
+        x = (self.x0 + np.random.normal(0.0, self.cfg.sigma_kick, size=(self.dim,))).astype(np.float64)
+        z_hash, raw, refined, i_hash = self._decode_candidate(x, max_new_tokens=max_new_tokens, do_sample=False)
+        fingerprint = SolutionFingerprint(z_hash=z_hash, i_hash=i_hash)
+        self._remember_fifo(self.seen_i, self.seen_i_fifo, i_hash, self.cfg.max_seen_intentions)
+        meta = {
+            "op": "fallback_random",
+            "z_hash": z_hash,
+            "i_hash": i_hash,
+            "ts": time.time(),
+            "tabu_status": "fallback",
+        }
+        return x, z_hash, raw, refined, i_hash, meta, fingerprint
+
+    def _update_current_solution(
+        self,
+        x: np.ndarray,
+        score: float,
+        z_hash: str,
+        i_hash: str,
+        intention: str,
+        intention_raw: str,
+        meta: Dict[str, Any],
+        fingerprint: SolutionFingerprint,
+    ) -> bool:
+        """
+        Update current solution based on Tabu Search acceptance criteria.
+        Key difference: accept if score >= current (not just >).
+        Returns True if accepted.
+        """
+        # Create the new solution
+        new_sol = CurrentSolution(
+            x=x,
+            score=score,
+            z_hash=z_hash,
+            i_hash=i_hash,
+            intention=intention,
+            intention_raw=intention_raw,
+            meta=meta,
+            fingerprint=fingerprint,
+        )
+        
+        # Check if this is tabu
+        is_tabu_candidate = self._is_tabu(fingerprint)
+        
+        # Check aspiration criteria (best ever overrides tabu)
+        aspiration_override = False
+        if is_tabu_candidate and self.cfg.use_aspiration:
+            if self.best_score is None or score > self.best_score:
+                aspiration_override = True
+                meta["aspiration_override"] = True
+        
+        if is_tabu_candidate and not aspiration_override:
+            # Reject tabu move
+            return False
+        
+        # Acceptance criteria: score >= current (crucial for plateau navigation)
+        current_score = self.current.score if self.current else float('-inf')
+        
+        if self.cfg.accept_equal:
+            accepted = score >= current_score
+        else:
+            accepted = score > current_score
+        
+        if accepted:
+            # Add old solution to tabu list (if exists)
+            if self.current is not None:
+                self._add_to_tabu(self.current.fingerprint, self.current.score)
+            
+            # Update current
+            self.current = new_sol
+            
+            # Update history
+            self.solution_history.append(x.copy())
+            if len(self.solution_history) > self.max_history:
+                self.solution_history.pop(0)
+            
+            # Check for improvement
+            if self.best_score is None or score > self.best_score:
+                self.best_score = score
+                self.best_ever = new_sol
+                self.best_candidate = self._solution_to_dict(new_sol)
+                self.iterations_without_improvement = 0
+            else:
+                self.iterations_without_improvement += 1
+            
+            return True
+        
+        # Not accepted - still add to tabu to avoid revisiting
+        self._add_to_tabu(fingerprint, score)
+        self.iterations_without_improvement += 1
+        return False
+
+    def summary(self) -> Dict[str, Any]:
+        current_info = None
+        if self.current:
+            current_info = {
+                "score": float(self.current.score),
+                "intention": self.current.intention[:100],
+                "z_hash": self.current.z_hash[:16],
+            }
+        
+        return {
+            "dim": self.dim,
+            "current_solution": current_info,
+            "tabu_list_size": len(self.tabu_list),
+            "tabu_tenure": self.cfg.tabu_tenure,
+            "banned_z": len(self.banned_z),
+            "seen_intentions": len(self.seen_i),
+            "solution_history_size": len(self.solution_history),
+            "iterations_without_improvement": self.iterations_without_improvement,
+            "iter_updates": self.iter_updates,
+            "total_evals": self.total_evals,
+            "best_score": self.best_score,
+            "best_candidate": self.best_candidate,
+            "last_update_ts": self.last_update_ts,
+        }
 
 
 TASKS: Dict[str, TaskState] = {}
 
-
 # =============================================================================
 # FastAPI app
 # =============================================================================
-app = FastAPI(title="CSC Intention Server", version="0.1")
+app = FastAPI(title="CSC Intention Server (Tabu Search)", version="0.3")
 
 
 @app.on_event("startup")
 def _startup():
     import sys
     try:
-        print("[CSC] Starting model initialization...", flush=True)
+        print("[CSC-TABU] Starting model initialization...", flush=True)
         sys.stdout.flush()
         initialize_models()
-        print("[CSC] Model initialization completed successfully.", flush=True)
+        print("[CSC-TABU] Model initialization completed successfully.", flush=True)
         sys.stdout.flush()
     except Exception as e:
-        print(f"[CSC] ERROR during model initialization: {e}", flush=True, file=sys.stderr)
+        print(f"[CSC-TABU] ERROR during model initialization: {e}", flush=True, file=sys.stderr)
         import traceback
         traceback.print_exc(file=sys.stderr)
-        sys.stderr.flush()
-        # Don't raise - let server start but endpoints will return 503
 
 
 @app.get("/health")
 async def health():
-    """Health check endpoint."""
     return {
         "status": "ok",
         "models_loaded": llm is not None and retriever is not None,
         "tasks_count": len(TASKS),
+        "algorithm": "TabuSearch",
     }
 
 
 @app.get("/")
 async def root():
-    """Root endpoint for testing."""
     return {
-        "service": "CSC Intention Server",
-        "version": "0.1",
-        "endpoints": [
-            "GET /health",
-            "PUT /tasks/{task_id}",
-            "POST /tasks/{task_id}/suggest",
-            "POST /tasks/{task_id}/feedback",
-            "GET /tasks/{task_id}/state",
-        ],
+        "service": "CSC Intention Server (Tabu Search)",
+        "version": "0.3",
+        "algorithm": "Tabu Search",
         "models_loaded": llm is not None and retriever is not None,
     }
 
 
 @app.put("/tasks/{task_id}")
 async def set_task(task_id: str, req: SetTaskReq):
-    """
-    Set or reset a task.
-    This resets CMA-ES state for that task_id.
-    """
-    # Check if models are initialized
     if llm is None or retriever is None:
-        raise HTTPException(
-            status_code=503, 
-            detail="CSC server models not initialized. Check server logs."
-        )
-    
+        raise HTTPException(status_code=503, detail="Models not initialized.")
     try:
-        st = TaskState(req.task, req.cma)
+        st = TaskState(req.task, req.tabu)
     except Exception as e:
+        import traceback
+        print(f"[CSC-TABU] set_task failed for {task_id}: {e}", flush=True)
+        traceback.print_exc()
         raise HTTPException(status_code=400, detail=str(e))
     TASKS[task_id] = st
-    print(f"[CSC] Task {task_id} created: novelty_lambda={st.spec.novelty_lambda}, novelty_mode={st.spec.novelty_mode}")
+    print(f"[CSC-TABU] Task {task_id} created: tabu_tenure={st.cfg.tabu_tenure}, sigma_local={st.cfg.sigma_local}")
     return {
         "task_id": task_id,
         "status": "ready",
         "dim": st.dim,
-        "popsize": st.cfg.popsize,
-        "use_refinement": st.spec.use_refinement,
-        "novelty_lambda": st.spec.novelty_lambda,
-        "novelty_mode": st.spec.novelty_mode,
+        "tabu_tenure": int(st.cfg.tabu_tenure),
+        "sigma_local": float(st.cfg.sigma_local),
+        "sigma_kick": float(st.cfg.sigma_kick),
+        "has_initial_solution": st.current is not None,
     }
 
 
 @app.post("/tasks/{task_id}/suggest", response_model=SuggestResp)
 async def suggest(task_id: str, req: SuggestReq):
-    """
-    Ask CMA-ES for candidate points and decode them into intentions.
-    Returns batch_id for later feedback().
-    """
     if task_id not in TASKS:
         raise HTTPException(status_code=404, detail="unknown task_id")
-    st = TASKS[task_id]
-
     if req.n <= 0:
         raise HTTPException(status_code=400, detail="n must be > 0")
 
+    st = TASKS[task_id]
     async with st.lock:
-        # Set popsize to match req.n for consistency between ask() and tell()
-        # This ensures CMA-ES gets feedback for all points it generates
-        st._update_popsize(req.n)
-        
-        X = st.es.ask()
-        # X should now have exactly req.n points (or we take first req.n if there's a mismatch)
-        if len(X) > req.n:
-            X = X[:req.n]
-
         batch_id = uuid.uuid4().hex
         st.pending[batch_id] = {}
 
         candidates: List[Candidate] = []
-        for x in X:
-            x = np.asarray(x, dtype=np.float64)
+        for _ in range(req.n):
+            x, z_hash, raw, refined, i_hash, meta, fingerprint = st._try_generate_candidate(
+                max_new_tokens=req.max_new_tokens,
+                do_sample=req.do_sample,
+                attempt_limit=15,
+            )
             cid = uuid.uuid4().hex
-            z_hash = st._hash_z(x)
-
-            raw, refined = st._decode_candidate(x, max_new_tokens=req.max_new_tokens, do_sample=req.do_sample)
-
-            meta = {
-                "z_hash": z_hash,
-                "refined": st.spec.use_refinement,
-                "ts": time.time(),
-            }
-
             st.pending[batch_id][cid] = PendingCandidate(
                 x=x,
                 z_hash=z_hash,
                 intention_raw=raw,
                 intention=refined,
+                i_hash=i_hash,
                 meta=meta,
+                fingerprint=fingerprint,
             )
-
             candidates.append(
                 Candidate(
                     candidate_id=cid,
@@ -736,12 +1093,6 @@ async def suggest(task_id: str, req: SuggestReq):
 
 @app.post("/tasks/{task_id}/feedback", response_model=FeedbackResp)
 async def feedback(task_id: str, req: FeedbackReq):
-    """
-    Provide evaluation scores for candidates from a batch.
-    Performs CMA-ES tell().
-
-    maximize=True => CMA cost = -score (so higher score is better)
-    """
     if task_id not in TASKS:
         raise HTTPException(status_code=404, detail="unknown task_id")
     st = TASKS[task_id]
@@ -751,81 +1102,90 @@ async def feedback(task_id: str, req: FeedbackReq):
             raise HTTPException(status_code=400, detail="unknown batch_id")
         batch = st.pending.pop(req.batch_id)
 
-        # Collect all candidate embeddings for batch_distance novelty calculation
-        all_z_in_batch = [pc.x for pc in batch.values()]
+        # Cleanup expired tabu entries
+        st._cleanup_expired_tabu()
 
-        # align X and costs with novelty bonus
-        X: List[np.ndarray] = []
-        costs: List[float] = []
-        best_local = None
+        updated = 0
+        best_local: Optional[Dict[str, Any]] = None
+        accepted_count = 0
 
-        for ev in req.evaluations:
+        # Sort evaluations by score (descending) to process best first
+        sorted_evals = sorted(req.evaluations, key=lambda e: e.score, reverse=True)
+
+        for ev in sorted_evals:
             if ev.candidate_id not in batch:
                 continue
             pc = batch[ev.candidate_id]
-            X.append(pc.x)
-            
-            # Compute novelty bonus if enabled (with optional decay over time)
-            score_task = float(ev.score)
-            novelty_bonus = 0.0
-            
-            if st.spec.novelty_lambda > 0.0:
-                # Decay: early iterations reward diversity, later focus on task score
-                if st.spec.novelty_decay_tau > 0:
-                    decay = 0.5 ** (st.iter_updates / st.spec.novelty_decay_tau)
-                    lambda_eff = st.spec.novelty_lambda * decay
-                else:
-                    lambda_eff = st.spec.novelty_lambda
-                if lambda_eff > 0:
-                    other_z = [z for z in all_z_in_batch if not np.array_equal(z, pc.x)]
-                    novelty = st._compute_novelty(
-                        pc.x, 
-                        other_z, 
-                        st.spec.novelty_mode
-                    )
-                    novelty_bonus = lambda_eff * novelty
-            
-            # Total score = task score + novelty bonus
-            score_total = score_task + novelty_bonus
-            
-            # Convert to cost for CMA-ES (CMA minimizes, so cost = -score if maximizing)
-            cost = -score_total if req.maximize else score_total
-            costs.append(cost)
+            aux = ev.aux or {}
+            score = float(ev.score)
+            st.total_evals += 1
 
-            # Track best candidate using total score (including novelty)
-            if best_local is None or score_total > best_local["score"]:
+            # Enrich fingerprint with semantic data from aux
+            if aux:
+                if "fix_mechanism" in aux:
+                    pc.fingerprint.fix_mechanism = aux["fix_mechanism"]
+                if "touched_files" in aux:
+                    pc.fingerprint.touched_files = tuple(sorted(aux["touched_files"]))
+                if "key_symbols" in aux:
+                    pc.fingerprint.key_symbols = tuple(sorted(aux["key_symbols"]))
+                if "ast_diff_hash" in aux:
+                    pc.fingerprint.ast_diff_hash = aux["ast_diff_hash"]
+
+            # Ban if score too low or empty patch
+            if score < st.cfg.ban_threshold or aux.get("note") == "empty patch":
+                st._ban(pc.z_hash, pc.i_hash)
+                updated += 1
+                continue
+
+            if not math.isfinite(score):
+                st._ban(pc.z_hash, pc.i_hash)
+                updated += 1
+                continue
+
+            if looks_like_junk(pc.intention):
+                st._ban(pc.z_hash, pc.i_hash)
+                updated += 1
+                continue
+
+            # Try to update current solution
+            effective_score = score if req.maximize else -score
+            meta = {**pc.meta, "feedback_aux": aux, "feedback_ts": time.time()}
+            
+            accepted = st._update_current_solution(
+                x=pc.x,
+                score=effective_score,
+                z_hash=pc.z_hash,
+                i_hash=pc.i_hash,
+                intention=pc.intention,
+                intention_raw=pc.intention_raw,
+                meta=meta,
+                fingerprint=pc.fingerprint,
+            )
+            
+            if accepted:
+                accepted_count += 1
+            
+            updated += 1
+
+            if best_local is None or effective_score > float(best_local.get("score", float('-inf'))):
                 best_local = {
                     "candidate_id": ev.candidate_id,
-                    "score": score_total,
-                    "score_task": score_task,
-                    "novelty": novelty_bonus / st.spec.novelty_lambda if st.spec.novelty_lambda > 0 else 0.0,
+                    "score": float(effective_score),
                     "intention": pc.intention,
                     "intention_raw": pc.intention_raw,
-                    "aux": ev.aux,
+                    "aux": aux,
+                    "accepted": accepted,
                 }
 
-        if not X:
-            raise HTTPException(status_code=400, detail="no matching evaluations in batch")
-
-        st.es.tell(X, costs)
         st.iter_updates += 1
         st.last_update_ts = time.time()
         
-        # Log novelty info
-        if st.spec.novelty_lambda > 0:
-            print(f"[CSC] feedback: {len(X)} evals, novelty_lambda={st.spec.novelty_lambda}, costs={[f'{c:.4f}' for c in costs]}")
+        current_score = st.current.score if st.current else None
+        print(f"[CSC-TABU] feedback: {updated} evals, {accepted_count} accepted, "
+              f"current_score={current_score}, best_score={st.best_score}, "
+              f"tabu_size={len(st.tabu_list)}, stagnation={st.iterations_without_improvement}")
 
-        # track best overall (in "score" coordinates, not cost)
-        if best_local is not None:
-            if st.best_score is None or best_local["score"] > st.best_score:
-                st.best_score = best_local["score"]
-                st.best_candidate = best_local
-
-        return FeedbackResp(
-            task_id=task_id,
-            updated=len(X),
-            best=st.best_candidate,
-        )
+        return FeedbackResp(task_id=task_id, updated=updated, best=st.best_candidate or best_local)
 
 
 @app.get("/tasks/{task_id}/state")
@@ -834,14 +1194,4 @@ async def state(task_id: str):
         raise HTTPException(status_code=404, detail="unknown task_id")
     st = TASKS[task_id]
     async with st.lock:
-        return {
-            "task_id": task_id,
-            "dim": st.dim,
-            "popsize": st.cfg.popsize,
-            "sigma0": st.cfg.sigma0,
-            "iter_updates": st.iter_updates,
-            "best_score": st.best_score,
-            "best_candidate": st.best_candidate,
-            "pending_batches": len(st.pending),
-            "last_update_ts": st.last_update_ts,
-        }
+        return {"task_id": task_id, **st.summary(), "pending_batches": len(st.pending)}
