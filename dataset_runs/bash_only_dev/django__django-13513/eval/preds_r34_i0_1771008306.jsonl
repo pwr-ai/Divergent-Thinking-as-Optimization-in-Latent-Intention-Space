@@ -1,0 +1,1 @@
+{"instance_id": "django__django-13513", "model_name_or_path": "csc+mini", "model_patch": "No changes needed. The code already implements the fix described in the PR. The explicit_or_implicit_cause function in django/views/debug.py already checks for both __cause__ and __suppress_context__ optionals and selects the first nonzero value in the result as required.\n"}

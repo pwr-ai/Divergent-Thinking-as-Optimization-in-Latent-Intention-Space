@@ -1,0 +1,1 @@
+{"instance_id": "django__django-17084", "model_name_or_path": "csc+mini", "model_patch": "diff --git a/django/__init__.py b/django/__init__.py\nindex 42317d407a..206cf0b67d 100644\n--- a/django/__init__.py\n+++ b/django/__init__.py\n@@ -1,6 +1,6 @@\n from django.utils.version import get_version\n \n-VERSION = (5, 0, 0, \"alpha\", 0)\n+VERSION = (4, 3, 0, \"final\", 0)\n \n"}

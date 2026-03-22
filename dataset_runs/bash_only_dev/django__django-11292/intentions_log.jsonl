@@ -1,0 +1,4 @@
+{"round": 0, "idx": 0, "intention": "\"Remove the --skip-checks option from management commands since it has already caused an issue and misleads users who may not understand the implications.\"", "key": "0f49b8e6d4d837ad92835222419f9a6a36480bf9"}
+{"round": 1, "idx": 0, "intention": "'Propose the addition of --skip-checks option to management commands!'   (Bug: 57506) (Question: What is the purpose of adding a --skip-checks option to the management command?)", "key": "df8162782ed7bdecb7b90abfb8cdc6ee908f91a6"}
+{"round": 2, "idx": 0, "intention": "Add new CLI flag --skip-checks to bypass system checks before performing an action.", "key": "7a3bd7723caec2d7e69cd1912d548707cc73f930"}
+{"round": 3, "idx": 0, "intention": "\"Run command with --skip-checks option to omit system checks\". Proposed by: Bob.", "key": "0ce4553f8e2cf03f4af1c05f8d71827d3509dc7d"}

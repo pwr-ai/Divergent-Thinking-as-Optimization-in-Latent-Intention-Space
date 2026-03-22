@@ -1,0 +1,1 @@
+{"round": 0, "idx": 0, "intention": "The fix would involve removing float conversion from the 'float' part of 'floatformat' filter and return already formatted string as it is from Decimal object for decimal numbers.", "key": "ddc74888cd07ec992fcadd2348fb60ce85fbc0a8"}

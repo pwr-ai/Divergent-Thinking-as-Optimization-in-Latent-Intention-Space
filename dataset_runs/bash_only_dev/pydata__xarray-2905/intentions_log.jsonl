@@ -1,0 +1,2 @@
+{"round": 0, "idx": 0, "intention": "\"Prevent coercing types on objects with a values property to be assigned inside arrays of dtype==object.\"", "key": "a5ed21ec37d4d702f9ececd8216aaf771006a740"}
+{"round": 1, "idx": 0, "intention": "Allow assignment of generic objects to indexed slices, even when they have a 'values' property, as long as dimensions are matched. When indexed assignment happens, xarray should store a list of these objects instead.", "key": "7a7c02151631197058891203f3a6397d41f74a84"}

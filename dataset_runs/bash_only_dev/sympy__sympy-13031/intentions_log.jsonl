@@ -1,0 +1,1 @@
+{"round": 0, "idx": 0, "intention": "Change the shapes of hstack and vstack outputs in case of empty Matrices with different number of columns so that the shapes match their intended semantics.", "key": "b7cd6df960b8be0a2538ee6d126453578a89d495"}

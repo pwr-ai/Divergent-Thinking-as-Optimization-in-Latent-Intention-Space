@@ -1,0 +1,1 @@
+{"instance_id": "matplotlib__matplotlib-14623", "model_name_or_path": "csc+mini", "model_patch": "error: unable to create temporary file: No space left on device\nerror: doc/_static/seaborn.png: failed to insert into database\nerror: unable to index file 'doc/_static/seaborn.png'\n"}

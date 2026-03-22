@@ -1,0 +1,1 @@
+{"instance_id": "sphinx-doc__sphinx-7440", "model_name_or_path": "csc+mini", "model_patch": "The issue described in the PR is for the phpmyadmin repository, not the current Sphinx repository. The glossary.rst file in this repository doesn't contain the MySQL/mysql duplicate term issue.\n"}

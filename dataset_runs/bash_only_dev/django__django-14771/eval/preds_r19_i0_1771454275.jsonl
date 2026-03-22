@@ -1,0 +1,1 @@
+{"instance_id": "django__django-14771", "model_name_or_path": "csc+mini", "model_patch": "diff --git a/tests/apps/apps.py b/tests/apps/apps.py\nindex efd2983779..7a04ce6a13 100644\n--- a/tests/apps/apps.py\n+++ b/tests/apps/apps.py\n@@ -1,3 +1,7 @@\n+# encoding: utf-8\n+\n+# encoding: utf-8\n+\n"}

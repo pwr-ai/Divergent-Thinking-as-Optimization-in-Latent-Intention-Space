@@ -1,0 +1,113 @@
+{
+  "49f904ef910be6fd13f4eef4acc0c0bccd3f0cf0": {
+    "score": 0.016666666666666666,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 1.0
+    }
+  },
+  "810fd401cdd915715b706750d5698fb5bb7ff212": {
+    "score": 0.016103603603603602,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.9662162162162162
+    }
+  },
+  "9a4098a0d49e9c46ff60ea4fc277e0579bdf28a6": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "empty_patch"
+    }
+  },
+  "cda85bfe7a0e88ad76e254f97617f7b372631044": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "no_instance_result"
+    }
+  },
+  "801bf5e34b807e3218ded8c9b66792993aba1b83": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "empty_patch"
+    }
+  },
+  "6362e838f2b3582fe18c1565bfef6488d32ec97f": {
+    "score": 0.016666666666666666,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 1.0
+    }
+  },
+  "d0e3f1f9449958714112fcf78ed220720dfb0ea7": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "empty_patch"
+    }
+  },
+  "4abb8be6df027f37ebd56cc8f1ec0c7bdc680706": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "no_instance_result"
+    }
+  },
+  "0ac5b301379c8713b908d8732b29318e4a889ade": {
+    "score": 0.01644144144144144,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.9864864864864865
+    }
+  },
+  "8c36cf560fbc3ce62a044b18b62aec61f2bff6d3": {
+    "score": 0.016666666666666666,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 1.0
+    }
+  },
+  "7207b102ca1beefa3b2610478631ea5c869078bd": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "empty_patch"
+    }
+  },
+  "6a6797ca9fa7eab03bc9341350649b2aa9fee62e": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "empty_patch"
+    }
+  },
+  "2a4bc5d9d0fe0e6abe5090982f98f4ba7311a4c9": {
+    "score": 1.0166666666666666,
+    "info": {
+      "resolved": true,
+      "f2p": 1.0,
+      "p2p": 1.0
+    }
+  }
+}

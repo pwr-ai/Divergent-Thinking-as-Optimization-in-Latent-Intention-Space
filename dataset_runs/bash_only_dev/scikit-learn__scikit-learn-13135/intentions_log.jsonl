@@ -1,0 +1,1 @@
+{"round": 0, "idx": 0, "intention": "Change `KBinsDiscretizer` to sort both centers and bin edges before fitting `KMeans`.", "key": "161d6b06647a097561af1e12b80aa693a9870f50"}

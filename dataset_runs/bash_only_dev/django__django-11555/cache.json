@@ -1,0 +1,26 @@
+{
+  "f6cad590d5294ee07d650a7ba1688e1958025a4a": {
+    "score": 0.016666666666666666,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 1.0
+    }
+  },
+  "ebe4143353cef9659808f250fb81951c07215066": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0
+    }
+  },
+  "5da62a9f124a9b9db304b9035e5df18a8f63d140": {
+    "score": 1.0166666666666666,
+    "info": {
+      "resolved": true,
+      "f2p": 1.0,
+      "p2p": 1.0
+    }
+  }
+}

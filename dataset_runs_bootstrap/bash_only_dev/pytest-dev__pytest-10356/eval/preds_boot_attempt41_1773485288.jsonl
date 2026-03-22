@@ -1,0 +1,1 @@
+{"instance_id": "pytest-dev__pytest-10356", "model_name_or_path": "csc+mini", "model_patch": "diff --git a/AUTHORS b/AUTHORS\nindex ca2872f32..71606d599 100644\n--- a/AUTHORS\n+++ b/AUTHORS\n@@ -18,6 +18,7 @@ Alexei Kozlenok\n Alice Purcell\n Allan Feldman\n Aly Sivji\n+Andy Bayles\n Amir Elkess\n Anatoly Bubenkoff\n"}

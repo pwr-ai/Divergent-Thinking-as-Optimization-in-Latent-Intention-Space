@@ -1,0 +1,193 @@
+{
+  "74167659e5b64abb27605e49f6943777ab9b0dbd": {
+    "score": 0.5149572649572649,
+    "info": {
+      "resolved": false,
+      "f2p": 0.5,
+      "p2p": 0.8974358974358975
+    }
+  },
+  "81e42d29298261d71a2741f17674784f27f44fad": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "empty_patch"
+    }
+  },
+  "15840b3b7a458d7a7e0cec89b4d883066bde9c96": {
+    "score": 0.016666666666666666,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 1.0
+    }
+  },
+  "75fd83e3a89e1de75043d86f0953af6c0e7e1c3d": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "empty_patch"
+    }
+  },
+  "e72efa28486740296907ca68f512c5d648ece895": {
+    "score": 1.0164529914529914,
+    "info": {
+      "resolved": false,
+      "f2p": 1.0,
+      "p2p": 0.9871794871794872
+    }
+  },
+  "2d34f0076cf33f7e7de1f2c1cfa2c87f5a5737e8": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0
+    }
+  },
+  "a140cf9a9e3b1c3604f9584c82c0ba44a470c3f6": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "empty_patch"
+    }
+  },
+  "31c1c363fc2f8d4e8cdb9e7a03ce0b952a67f034": {
+    "score": 0.016666666666666666,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 1.0
+    }
+  },
+  "589244fd93ac1e00b5778858610faba526a13afb": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0
+    }
+  },
+  "215c7d8708e483b232324e255e986a4137ac2b85": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0
+    }
+  },
+  "6b37495798de87b9ab260496492a30ba9e575c08": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "empty_patch"
+    }
+  },
+  "28ea772d9bd4db3a5ae1c7b5a32dcd27222fe556": {
+    "score": 0.016666666666666666,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 1.0
+    }
+  },
+  "e3c348a1439ac1bd469a663ffb7221ee0bc736a5": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "no_instance_result"
+    }
+  },
+  "ac8709638b6d464cb13f67798812e69bfe6d8c90": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "empty_patch"
+    }
+  },
+  "0e9c2f6c528e07f38e43d1478530abe660ad87b9": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0
+    }
+  },
+  "ba753233a3eaf61923250f76dd13169ee52bc4e2": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0
+    }
+  },
+  "bdc810b1a929ca30868b9df93b3acaaa98b25259": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0
+    }
+  },
+  "f708d27f1238edf78a6f296762786ba38a4c6843": {
+    "score": 0.01517094017094017,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.9102564102564102
+    }
+  },
+  "d2140e3e2d1b3e0d4bb170ba62844af65c402de6": {
+    "score": 0.016666666666666666,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 1.0
+    }
+  },
+  "b9848e0b29fdebe05a14147827f26732982677a2": {
+    "score": 0.010256410256410256,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.6153846153846154
+    }
+  },
+  "7a734ac2c6f8df480f305aced018ce973d6c371c": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "empty_patch"
+    }
+  },
+  "74f472621edc01411a55779af9cfe4be0b1a221c": {
+    "score": 0.016666666666666666,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 1.0
+    }
+  },
+  "817a23a0ca1125e39df913ecdc53125f0128ed09": {
+    "score": 1.0166666666666666,
+    "info": {
+      "resolved": true,
+      "f2p": 1.0,
+      "p2p": 1.0
+    }
+  }
+}

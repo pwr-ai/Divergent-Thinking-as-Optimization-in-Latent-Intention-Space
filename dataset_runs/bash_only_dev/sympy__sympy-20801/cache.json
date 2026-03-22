@@ -1,0 +1,196 @@
+{
+  "f9292ff1fe8970071f14168bb2968c747894a8d3": {
+    "score": 0.016319444444444442,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.9791666666666666
+    }
+  },
+  "ec1cbed3ffe57377e4c82d5e017420a788bbf921": {
+    "score": 0.016666666666666666,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 1.0
+    }
+  },
+  "c16081ddb34e654689a292b4b9cfc820fc2b68b9": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0
+    }
+  },
+  "ddba496de5473fa84dd82d9c545a2fae61822b82": {
+    "score": 0.016666666666666666,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 1.0
+    }
+  },
+  "899975d1ede13a2d8ec8b4608eed321a1b27919b": {
+    "score": 0.016666666666666666,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 1.0
+    }
+  },
+  "9d7be75876a2a11bdff7bb8d58c4ed7fa05ceeb7": {
+    "score": 0.016666666666666666,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 1.0
+    }
+  },
+  "456e5aeea2922b4195638c62b7ea994074c9da1d": {
+    "score": 0.016666666666666666,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 1.0
+    }
+  },
+  "b050c9c872f1080c7af2c618c30a9c4e382e1ecc": {
+    "score": 0.016319444444444442,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.9791666666666666
+    }
+  },
+  "4d3dfb7dfcd73953b1459f1946d38d9797cb149f": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0
+    }
+  },
+  "d66ed5b69ca956da13753ea95c73ee7b758cc54b": {
+    "score": 0.016666666666666666,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 1.0
+    }
+  },
+  "fbc91307940ea3784c67293e02db8140918f5f70": {
+    "score": 0.016493055555555556,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.9895833333333334
+    }
+  },
+  "0e0b633e7081b24eccfda2b4687841c07eb5f07b": {
+    "score": 0.015104166666666667,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.90625
+    }
+  },
+  "028910927254b179e0a2bbb1b7e3837493560a9f": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "empty_patch"
+    }
+  },
+  "739b37e318600796e9eb41b68836718276ebf68c": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0
+    }
+  },
+  "760e41cddb5201552ee07564fba6978cff8530fc": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0
+    }
+  },
+  "208579ee1e1dabc64cffc0caa9cfd094e70a0b1d": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "no_instance_result"
+    }
+  },
+  "db91e405c4bc6ce3d756e3e5bdf2e185eeb36075": {
+    "score": 0.013020833333333334,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.78125
+    }
+  },
+  "93a6281383d6b0889735100de90acc43681d5b94": {
+    "score": 0.01614583333333333,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.96875
+    }
+  },
+  "d2c0f058691a0a8b4171ab3a2416dac738868efd": {
+    "score": 0.016666666666666666,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 1.0
+    }
+  },
+  "73aceb7d0376a246fface2544aa2cad50dc8382e": {
+    "score": 0.016666666666666666,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 1.0
+    }
+  },
+  "5cbda531c08c32b345489dc715b93b2aef29508e": {
+    "score": 0.016666666666666666,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 1.0
+    }
+  },
+  "723d9c5188134a8f53bb32c8849192cc38064521": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0
+    }
+  },
+  "3a1e2583e15b74db9e16178ed7ceaa75d5bdce21": {
+    "score": 0.01614583333333333,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.96875
+    }
+  },
+  "dc79fe9920af1ea1f391dce51ed394bc52891a5f": {
+    "score": 1.0166666666666666,
+    "info": {
+      "resolved": true,
+      "f2p": 1.0,
+      "p2p": 1.0
+    }
+  }
+}

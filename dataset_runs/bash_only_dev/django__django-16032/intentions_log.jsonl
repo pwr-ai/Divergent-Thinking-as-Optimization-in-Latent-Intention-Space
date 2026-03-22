@@ -1,0 +1,3 @@
+{"round": 0, "idx": 0, "intention": "Change the inner queryset to not return the annotated value to the alias in the outer queryset.", "key": "0bcd4bf1e44b2d238966101e8eda1666ee7c358c"}
+{"round": 1, "idx": 0, "intention": "The use of alias and annotate in a wrong order results in unexpected behaviors from queries. To fix this, the order must be reversed, with annotate() before aliases.", "key": "ef37ccf6fb7585be8a886aefabd9108db57b943c"}
+{"round": 2, "idx": 0, "intention": "The core fix for this bug can be approached by altering the design of methods ‘alias’ and ‘__in’ to ensure compatibility and proper clearing of the selected fields on the RHS in the event of using these features sequentially within a DB subquery.", "key": "2f9e73e73728c2eb93b6bb483ef1466c88e9e405"}

@@ -1,0 +1,1 @@
+{"instance_id": "django__django-12406", "model_name_or_path": "csc+mini", "model_patch": "diff --git a/django/forms/models.py b/django/forms/models.py\nindex dafc11f995..1810f47422 100644\n--- a/django/forms/models.py\n+++ b/django/forms/models.py\n@@ -1,3 +1,4 @@\n+from django import forms\n \"\"\"\n Helper functions for creating Form classes from Django models\n"}

@@ -1,0 +1,2 @@
+{"round": 0, "idx": 0, "intention": "'Revise deconstruction logic for expressions to prioritiseonedot imports when possible, reducing generated migration code.’", "key": "d3bc3bb0ad716a1ec1109c655a8f333cbfd3bc37"}
+{"round": 1, "idx": 0, "intention": "Simplify the path for the deconstruction of expressions into standard models import.", "key": "3af0cd20e492236877adb7da7a6ddf6d5cd9b456"}

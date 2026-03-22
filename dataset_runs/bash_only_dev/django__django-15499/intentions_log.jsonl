@@ -1,0 +1,1 @@
+{"round": 0, "idx": 0, "intention": "Instead, migration optimization should preserve the ‘as is’ behavior of CreateModel + AlterModelManagers with separate migration classes/functions for options handling, CreateModel and AlterModelManagers respectively.", "key": "ce55b77a94da118957c6525b61ec249161c18b77"}

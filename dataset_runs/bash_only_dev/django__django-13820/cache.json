@@ -1,0 +1,19 @@
+{
+  "d84945a0a2a378037eb11ba61cfba9fedc8c3f48": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "empty_patch"
+    }
+  },
+  "b38bd4a29ebfd7ea3e0cc0e4618af57cc2c30e7f": {
+    "score": 1.0166666666666666,
+    "info": {
+      "resolved": true,
+      "f2p": 1.0,
+      "p2p": 1.0
+    }
+  }
+}

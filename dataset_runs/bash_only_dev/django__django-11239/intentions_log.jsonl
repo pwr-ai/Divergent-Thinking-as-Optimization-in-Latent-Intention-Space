@@ -1,0 +1,2 @@
+{"round": 0, "idx": 0, "intention": "\"Change the Django dbshell PostgreSQL client to support client certificate and private key.\"", "key": "5f61fa65169bc1477e30634316ae44b3495ac292"}
+{"round": 1, "idx": 0, "intention": "add support to dbshell for PostgreSQL client certificates, key and mutual SSL based on the provided options. Note that this approach is based on the background information. The problem context might change a bug’s fix intention, as well as its actual implementation does.", "key": "ba14111074a2f53b63ba1427812ba2c77aa07b33"}

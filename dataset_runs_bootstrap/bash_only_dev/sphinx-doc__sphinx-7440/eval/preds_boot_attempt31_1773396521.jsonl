@@ -1,0 +1,1 @@
+{"instance_id": "sphinx-doc__sphinx-7440", "model_name_or_path": "csc+mini", "model_patch": "Unable to reproduce the issue: no duplicate 'mysql' term found in any glossary file in the current repository. The error message may be from a different context or an older version of the repository.\n"}
