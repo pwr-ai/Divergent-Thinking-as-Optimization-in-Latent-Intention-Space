@@ -196,17 +196,6 @@ The `future_work/` directory contains alternative search strategies explored dur
 
 These are not reported in the paper but may be useful for future research.
 
-## Citation
-
-```bibtex
-@inproceedings{bystronski2026latent-intention-search,
-  title     = {Beyond Discrete Search: Divergent Thinking as Optimization in Latent Intention Space},
-  author    = {Bystro\'{n}ski, Mateusz},
-  year      = {2026},
-  note      = {Under review}
-}
-```
-
 ## License
 
 This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
