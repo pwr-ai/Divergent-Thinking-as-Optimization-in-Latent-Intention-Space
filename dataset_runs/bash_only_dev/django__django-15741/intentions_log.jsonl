@@ -1,0 +1,4 @@
+{"round": 0, "idx": 0, "intention": "\"Propose a fix for Django's get_format that handles lazy string filters correctly (e.g., 'some_date|date:_('Y-m-d')) without raising a TypeError when getting the attribute name.\"", "key": "70af83b1479e7dc9e2616ccfa73b618592c0830e"}
+{"round": 1, "idx": 0, "intention": "Make the 'get_format()' function accept a lazy string as a parameter.", "key": "85505cff1a94517cc8020ceb919379ac47d0b65a"}
+{"round": 2, "idx": 0, "intention": "Update django.utils.formats.get_format to accept lazy strings by changing the check if name is string to check if name is callable.", "key": "016619a5cdf8362d5c0af3ca9f92b68ffa9f8de6"}
+{"round": 3, "idx": 0, "intention": "Use a simple implementation that allows lazy strings to be passed to django.utils.formats.get_format.", "key": "01c2cdbcdd10545c475ae3c09216c7eff445b4d6"}

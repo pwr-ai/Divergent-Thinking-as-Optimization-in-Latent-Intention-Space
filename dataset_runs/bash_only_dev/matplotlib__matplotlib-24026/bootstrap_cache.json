@@ -1,0 +1,51 @@
+{
+  "attempts": [
+    {
+      "idx": 0,
+      "patch": "diff --git a/lib/matplotlib/stackplot.py b/lib/matplotlib/stackplot.py\nindex c580043eeb..5f9091f47f 100644\n--- a/lib/matplotlib/stackplot.py\n+++ b/lib/matplotlib/stackplot.py\n@@ -6,6 +6,7 @@ https://stackoverflow.com/q/2225995/\n (https://stackoverflow.com/users/66549/doug)\n \"\"\"\n \n+from matplotlib.colors import to_rgba\n import numpy as np\n \n from matplotlib import _api\n@@ -70,7 +71,14 @@ def stackplot(axes, x, *args,\n \n     labels = iter(labels)\n     if colors is not None:\n-        axes.set_prop_cycle(color=colors)\n+        # Convert any \"C\" format colors to RGBA\n+        converted_colors = []\n+        for c in colors:\n+            if isinstance(c, str) and c.startswith(\"C\") and len(c) == 2 and c[1].isdigit():\n+                converted_colors.append(to_rgba(c))\n+            else:\n+                converted_colors.append(c)\n+        axes.set_prop_cycle(color=converted_colors)\n \n     # Assume data passed has not been 'stacked', so stack it here.\n     # We'll need a float buffer for the upcoming calculations.",
+      "trace": "[assistant]\nTHOUGHT: There are some tests that use `stackplot`. Let me run the general matplotlib tests to see if any of them cover this functionality.\n\n```bash\ncd /testbed && python -m pytest lib/matplotlib/tests/test_pyplot.py::test_stackplot -v\n```\n\n---\n\n[user]\n<returncode>4</returncode>\n<output>\n============================= test session starts ==============================\nplatform linux -- Python 3.11.11, pytest-8.3.4, pluggy-1.5.0 -- /opt/miniconda3/envs/testbed/bin/python\ncachedir: .pytest_cache\nrootdir: /testbed\nconfigfile: pytest.ini\nplugins: xdist-3.6.1, cov-6.0.0, timeout-2.3.1, rerunfailures-15.0\ncollecting ... ERROR: not found: /testbed/lib/matplotlib/tests/test_pyplot.py::test_stackplot\n(no match in any of [<Module test_pyplot.py>])\n\ncollected 0 items\n\n============================ no tests ran in 3.51s =============================\n</output>\n\n---\n\n[assistant]\nTHOUGHT: Let me check what tests are available in `test_pyplot.py` that might cover stackplot.\n\n```bash\ngrep -n \"def test_\" /testbed/lib/matplotlib/tests/test_pyplot.py | grep -i stack\n```\n\n---\n\n[user]\n<returncode>0</returncode>\n<output>\n77:def test_stackplot_smoke():\n</output>\n\n---\n\n[assistant]\nTHOUGHT: There's a `test_stackplot_smoke` test. Let me run this specific test to verify our changes.\n\n```bash\ncd /testbed && python -m pytest lib/matplotlib/tests/test_pyplot.py::test_stackplot_smoke -v\n```\n\n---\n\n[user]\n<returncode>0</returncode>\n<output>\n============================= test session starts ==============================\nplatform linux -- Python 3.11.11, pytest-8.3.4, pluggy-1.5.0 -- /opt/miniconda3/envs/testbed/bin/python\ncachedir: .pytest_cache\nrootdir: /testbed\nconfigfile: pytest.ini\nplugins: xdist-3.6.1, cov-6.0.0, timeout-2.3.1, rerunfailures-15.0\ncollecting ... collected 1 item\n\nlib/matplotlib/tests/test_pyplot.py::test_stackplot_smoke PASSED         [100%]\n\n============================== 1 passed in 0.41s ===============================\n</output>\n\n---\n\n[assistant]\nTHOUGHT: Great! The existing test passes. Now let me create a simple test script to verify that the 'C' color format works correctly with stackplot. I'll create a test script that reproduces the issue from the PR description and see if it works with our fix.\n\n```bash\ncat > /tmp/test_stackplot_c_colors.py << 'EOF'\nimport matplotlib.pyplot as plt\nfrom matplotlib.patches import Rectangle\nimport numpy as np\n\nmy_data = np.array([[1, 1, 1], [1, 2, 3], [4, 3, 2]])\nfig, ax = plt.subplots()\nax.plot([1, 3], [1, 3], color='C0')\nax.add_patch(Rectangle(xy=(1.5, 1.5), width=0.5, height=0.5, facecolor='C1'))\nax.stackplot([1, 2, 3], my_data, colors=['C2', 'C3', 'C4'])\nplt.savefig('/tmp/stackplot_test.png')\nplt.close()\nprint(\"Test completed successfully - no errors\")\nEOF\n\npython /tmp/test_stackplot_c_colors.py\n```\n\n---\n\n[user]\n<returncode>0</returncode>\n<output>\nTest completed successfully - no errors\n</output>\n\n---\n\n[assistant]\nTHOUGHT: Excellent! The test script ran successfully without any errors, which means our fix works correctly. The stackplot function now properly handles 'C' format colors by converting them to RGBA before passing them to `set_prop_cycle`.\n\nLet me summarize the changes made:\n1. Added import for `to_rgba` from `matplotlib.colors`\n2. Modified the color handling in `stackplot` to convert 'C' format colors to RGBA values before setting the property cycle\n\nThese changes allow stackplot to work with 'C' format colors while maintaining consistency with other matplotlib plotting functions.\n\nNow I'll submit the final solution:\n\n```bash\necho COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT && git add -A && git diff --cached\n```\n\n---\n\n[user]\ndiff --git a/lib/matplotlib/stackplot.py b/lib/matplotlib/stackplot.py\nindex c580043eeb..5f9091f47f 100644\n--- a/lib/matplotlib/stackplot.py\n+++ b/lib/matplotlib/stackplot.py\n@@ -6,6 +6,7 @@ https://stackoverflow.com/q/2225995/\n (https://stackoverflow.com/users/66549/doug)\n \"\"\"\n \n+from matplotlib.colors import to_rgba\n import numpy as np\n \n from matplotlib import _api\n@@ -70,7 +71,14 @@ def stackplot(axes, x, *args,\n \n     labels = iter(labels)\n     if colors is not None:\n-        axes.set_prop_cycle(color=colors)\n+        # Convert any \"C\" format colors to RGBA\n+        converted_colors = []\n+        for c in colors:\n+            if isinstance(c, str) and c.startswith(\"C\") and len(c) == 2 and c[1].isdigit():\n+                converted_colors.append(to_rgba(c))\n+            else:\n+                converted_colors.append(c)\n+        axes.set_prop_cycle(color=converted_colors)\n \n     # Assume data passed has not been 'stacked', so stack it here.\n     # We'll need a float buffer for the upcoming calculations.\n",
+      "temperature": 0.3,
+      "score": 1.0166666666666666,
+      "info": {
+        "resolved": true,
+        "f2p": 1.0,
+        "p2p": 1.0
+      }
+    }
+  ],
+  "anchors": [
+    {
+      "text": "The fix aims to allow the `stackplot` function to accept color aliases like 'C0', 'C1', etc., by converting them to RGBA format before setting the property cycle. This ensures that the colors remain synchronized across different plot types for consistency and ease of comparison.",
+      "score": 1.0166666666666666,
+      "info": {
+        "resolved": true,
+        "f2p": 1.0,
+        "p2p": 1.0
+      },
+      "from_attempt": 0
+    },
+    {
+      "text": "Add input validation and error handling to prevent edge cases.",
+      "score": 0.5,
+      "info": {
+        "resolved": false,
+        "f2p": 0.0,
+        "p2p": 0.0,
+        "note": "hardcoded_diversity_anchor"
+      },
+      "from_attempt": "hardcoded_0"
+    },
+    {
+      "text": "Refactor code structure to improve maintainability and fix logic flow.",
+      "score": 0.5,
+      "info": {
+        "resolved": false,
+        "f2p": 0.0,
+        "p2p": 0.0,
+        "note": "hardcoded_diversity_anchor"
+      },
+      "from_attempt": "hardcoded_1"
+    }
+  ],
+  "solved_in_bootstrap": true
+}

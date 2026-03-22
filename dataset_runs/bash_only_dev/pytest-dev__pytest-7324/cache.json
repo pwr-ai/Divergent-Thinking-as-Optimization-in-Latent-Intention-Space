@@ -1,0 +1,448 @@
+{
+  "c989cd1c3257940664791db2c9be0346b3217d39": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "empty_patch"
+    }
+  },
+  "95cce5f36618f37c07cca022d5a1d53cb125315c": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0
+    }
+  },
+  "0c95767e71ee8df6ced2e2c18b7e4134012ada77": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "empty_patch"
+    }
+  },
+  "2cd07539e3ccabdd96e56c6d6b658ad3007fc066": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "empty_patch"
+    }
+  },
+  "da7df42d911270967316d6800df047abffaaf03a": {
+    "score": 0.016666666666666666,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 1.0
+    }
+  },
+  "27776c9083213da46a60be07878f5112c6998360": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0
+    }
+  },
+  "16756b54163c224a0f65fdc2ba5b59a61ccac82a": {
+    "score": 0.016666666666666666,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 1.0
+    }
+  },
+  "8748b9321eed07f708841498e86a9ae3add01806": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "empty_patch"
+    }
+  },
+  "b6ea80344803034d29132d22ee4f76296d128d80": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "empty_patch"
+    }
+  },
+  "1974f5bf6d2922f041ec0219ca9b62c82581b6fc": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "mini_exception:CalledProcessError"
+    }
+  },
+  "5c50b625a2ea6ad0942317d34fab261a1836217b": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "mini_exception:CalledProcessError"
+    }
+  },
+  "24c4abe7b3da858e71ccbc135bb7e391d946dd2a": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "mini_exception:CalledProcessError"
+    }
+  },
+  "97ab403b013dc46631f36e828b5830c605b73681": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "mini_exception:CalledProcessError"
+    }
+  },
+  "20ef3c8b30956d0d5637da02f6034ad6eb960179": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "mini_exception:CalledProcessError"
+    }
+  },
+  "0db209e8aae8bbb046ccbef5a62a4d0fe990c6ec": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "mini_exception:CalledProcessError"
+    }
+  },
+  "6fc5dd290423f438a8efbc8e8d113807f43fda76": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "mini_exception:CalledProcessError"
+    }
+  },
+  "56146236d7cda8174d75234cdd238d4cd6898232": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "mini_exception:CalledProcessError"
+    }
+  },
+  "3302f12cb68ca10f98c63efe2f487cbf005bb7ac": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "mini_exception:CalledProcessError"
+    }
+  },
+  "6f8c124c4a49d5896b636c8c5c1c61516b7abe79": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "mini_exception:CalledProcessError"
+    }
+  },
+  "6ac19e5770437190c388d03dfbd9d15e20e37bbd": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "mini_exception:CalledProcessError"
+    }
+  },
+  "906520ba8556fd612b4d7d2e613be75421bfac0d": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "mini_exception:CalledProcessError"
+    }
+  },
+  "1889d3e81fd2a9907bb325089148cfc99f5afa30": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "mini_exception:CalledProcessError"
+    }
+  },
+  "a7df96308e916132f8acbe9c2d325a7f2a8041a4": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "mini_exception:CalledProcessError"
+    }
+  },
+  "c137b9e25a166650cfbfb6761d4349d9c2cd3d6d": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "mini_exception:CalledProcessError"
+    }
+  },
+  "fb929709a474e3b9e3a8bf4dbf8506937686feec": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "mini_exception:CalledProcessError"
+    }
+  },
+  "7e7a6c20f235dcf4fa4b585dec44fcb1cf239d0d": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "mini_exception:CalledProcessError"
+    }
+  },
+  "5f6314cf9abe962902b4aa132d7db70f116bfaac": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "mini_exception:CalledProcessError"
+    }
+  },
+  "49b77edd97ae14007b6726f52fcfbec6ec12cc6c": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "mini_exception:CalledProcessError"
+    }
+  },
+  "09f6e0941d95240638f9214457070dedeb85c2b9": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "mini_exception:CalledProcessError"
+    }
+  },
+  "de5f785d22f1f40fd252ef919f42c5e8b171b293": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "mini_exception:CalledProcessError"
+    }
+  },
+  "df1d3df4736360bce5602651268481960ed5ceb9": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "mini_exception:CalledProcessError"
+    }
+  },
+  "e692409c7d7b6edbfa2775d88e9c64871615a873": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "mini_exception:CalledProcessError"
+    }
+  },
+  "9afd2b56b952593d0005c27c3c249cfdff926e2e": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "mini_exception:CalledProcessError"
+    }
+  },
+  "1fd49f522d4db9235c42d8b439104420a5d5b1d5": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "mini_exception:CalledProcessError"
+    }
+  },
+  "d549be1c73c545962af57bcfa4db0044ae6fd771": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "mini_exception:CalledProcessError"
+    }
+  },
+  "18e5ff23d9c3361ee811108dff62d81ac7e5efc5": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "mini_exception:CalledProcessError"
+    }
+  },
+  "defc722363c8ceb7c4c7676ee7191871b9efd736": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "mini_exception:CalledProcessError"
+    }
+  },
+  "7d10fa3275499bd262c3e3b72f3474825991370c": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "mini_exception:CalledProcessError"
+    }
+  },
+  "dd8774865ce0d4078f411d9f7445ecd5e9eafba1": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "mini_exception:CalledProcessError"
+    }
+  },
+  "eed99ad098c6b7d2d0d7167e7aadd54e04966ae9": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "mini_exception:CalledProcessError"
+    }
+  },
+  "facee6905e8a4750235d4d3de765a6575e517a07": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "mini_exception:CalledProcessError"
+    }
+  },
+  "fa6b314eeb5eb31f3d89fe23c617c17378c545d6": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "mini_exception:CalledProcessError"
+    }
+  },
+  "c9e9044adc4f853ab8a18459db8fd5b0bd000f0b": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "mini_exception:CalledProcessError"
+    }
+  },
+  "3e10c2d36698bc5cc2181559197bee365dd9514c": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "mini_exception:CalledProcessError"
+    }
+  },
+  "17c255a3a414068f754d33c5076087ad08c49026": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "mini_exception:CalledProcessError"
+    }
+  },
+  "8d91b6bcf9f3fb355d95000b0c29a69730c7520b": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "mini_exception:CalledProcessError"
+    }
+  },
+  "076d9b0242487bcb8962849d32705fd527a28ed0": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "mini_exception:CalledProcessError"
+    }
+  },
+  "9c267c86065b0c69c7684e2281be1572353c89e6": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "mini_exception:CalledProcessError"
+    }
+  },
+  "ae6606ec3854ce6dd2a751714c87db4cfcbfcc1b": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "mini_exception:CalledProcessError"
+    }
+  },
+  "f03ac7ac35bb5f29730dd80439db63804be12860": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "mini_exception:CalledProcessError"
+    }
+  }
+}

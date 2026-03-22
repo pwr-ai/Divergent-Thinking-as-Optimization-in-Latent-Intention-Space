@@ -1,0 +1,2 @@
+{"round": 0, "idx": 0, "intention": "Consider designing database models that reduce dependency on AddIndex and RemoveIndex operations to minimize their execution during migration processes.", "key": "dd38cc1c58adfb6f4006045827f975c654500afe"}
+{"round": 1, "idx": 0, "intention": "Reduce the number of AddIndex and RemoveIndex operations while preserving the intended database schema changes.", "key": "d21af03edf8ec862d8cea479b07f74a89cc500ea"}

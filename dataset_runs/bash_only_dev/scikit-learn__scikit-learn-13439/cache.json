@@ -1,0 +1,18 @@
+{
+  "c65b00487960495064b64f592e06e0897ea5b097": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0
+    }
+  },
+  "b754a85bfc97d74ecff790e7315c6f31e3767c2b": {
+    "score": 1.0166666666666666,
+    "info": {
+      "resolved": true,
+      "f2p": 1.0,
+      "p2p": 1.0
+    }
+  }
+}

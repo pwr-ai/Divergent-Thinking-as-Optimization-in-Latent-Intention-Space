@@ -1,0 +1,117 @@
+{
+  "d575299bffcc65cd0ad7116bb80dcae112c25c30": {
+    "score": 0.0009363295880149813,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.056179775280898875
+    }
+  },
+  "37c348a0b1263a3036ef9b8a1422007a102a813c": {
+    "score": 0.730952380952381,
+    "info": {
+      "resolved": false,
+      "f2p": 0.7142857142857143,
+      "p2p": 1.0
+    }
+  },
+  "e9432bcc0805cd33b5498f444b33f22cd82c65a9": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0
+    }
+  },
+  "7fa326c8b6c406dd24b4f6625a396098b0454bc8": {
+    "score": 0.5880952380952381,
+    "info": {
+      "resolved": false,
+      "f2p": 0.5714285714285714,
+      "p2p": 1.0
+    }
+  },
+  "269a113129f0e4f92637aad71f562aebefe92fb5": {
+    "score": 0.730952380952381,
+    "info": {
+      "resolved": false,
+      "f2p": 0.7142857142857143,
+      "p2p": 1.0
+    }
+  },
+  "7799f123a8313147074643a0f27c06f51f5fad96": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "no_instance_result"
+    }
+  },
+  "a00a48705201cce4c472fe7dd285d60b237629af": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0
+    }
+  },
+  "756f089e5bab7da03544e0ff1ed8b681faecf061": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0
+    }
+  },
+  "dc266dc95cbaa8af639f2770d444e69dc6d4d67b": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "mini_exception:BadRequestError"
+    }
+  },
+  "3e93e651d7bef69eba1e7cfe93a02d4a13279e93": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0
+    }
+  },
+  "deba62764050a02a527c4a46dfc535fff1c36bb5": {
+    "score": 0.5880952380952381,
+    "info": {
+      "resolved": false,
+      "f2p": 0.5714285714285714,
+      "p2p": 1.0
+    }
+  },
+  "6faa4ac2fb1102b2e0d8988966dea818f6afbcd3": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "no_instance_result"
+    }
+  },
+  "8ad75f143628bc80864e1ecc4ba874de3954d1c1": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0
+    }
+  },
+  "3da4d894cf3c2ce58413890790ac5f0ee58295a9": {
+    "score": 1.0166666666666666,
+    "info": {
+      "resolved": true,
+      "f2p": 1.0,
+      "p2p": 1.0
+    }
+  }
+}

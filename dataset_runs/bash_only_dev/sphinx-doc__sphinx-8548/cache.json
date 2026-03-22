@@ -1,0 +1,412 @@
+{
+  "48784e4628cdf38e13cfa964dabdbc9fcd429b2a": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0
+    }
+  },
+  "2346d7fa616a7263dae6516723015ad59435d7db": {
+    "score": 0.013333333333333334,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.8
+    }
+  },
+  "14797d6a788d8660ec0a5ba5ec19962162ac5e61": {
+    "score": 0.013333333333333334,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.8
+    }
+  },
+  "ee2620a120aedcde11ed4c0dd784107d62f6b992": {
+    "score": 0.016666666666666666,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 1.0
+    }
+  },
+  "c7c5b15a1d959329f67a45c7eeebe92e62d328c2": {
+    "score": 0.013333333333333334,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.8
+    }
+  },
+  "4512945404428517cffc6e64165b784216de9041": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0
+    }
+  },
+  "7b512a82885c9bd8d2e0600f7f273766e15ac78a": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0
+    }
+  },
+  "f0c047c0bcbc2247694a7b3afcdba51f57f1b599": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "empty_patch"
+    }
+  },
+  "ef02c3f1e6c2e6ed0a3f410edc57c61dc615ad8b": {
+    "score": 0.016666666666666666,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 1.0
+    }
+  },
+  "6f43ee6e8cab6a97448d367d0514774f66b73830": {
+    "score": 0.01,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.6
+    }
+  },
+  "a85f6f138562ebaf9ec4e78fa7662ce1a81d6a66": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "empty_patch"
+    }
+  },
+  "8b9fdc0c7f73c392e6562aacdbb2801a2fc3aab1": {
+    "score": 0.006666666666666667,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.4
+    }
+  },
+  "e4d4c6ce72b80adc47ab220eaaba9f2730829d6a": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0
+    }
+  },
+  "4eb38bcd31b88c12fd988ff12fa7a4b6cdff04ce": {
+    "score": 0.016666666666666666,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 1.0
+    }
+  },
+  "8a6e04f5381da600fbc98fcc108086964ad1b20d": {
+    "score": 0.016666666666666666,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 1.0
+    }
+  },
+  "795c41d6e8cb41ac7f222b273eebbbb8b6c7ae63": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "empty_patch"
+    }
+  },
+  "46501f54e169b87a9c3cced1202a291aec9ce084": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "empty_patch"
+    }
+  },
+  "18c82b7cc9a87d421a52b7a2146208490ba63d6e": {
+    "score": 0.01,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.6
+    }
+  },
+  "61c53e5b604815d21d880cf4580cc0ce7abc8f30": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "no_instance_result"
+    }
+  },
+  "d261675e285471ccc5604aaa4924db1e490b41c2": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "empty_patch"
+    }
+  },
+  "ee9c6efff0dea785ac8b09e555cc340df90778b1": {
+    "score": 0.016666666666666666,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 1.0
+    }
+  },
+  "7bcc430575694eb4b4cd9a8140e7e6304eb5f18c": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0
+    }
+  },
+  "0e8f4ebc161f401cabe2f9112c071ed90f9873fb": {
+    "score": 0.013333333333333334,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.8
+    }
+  },
+  "0dd4566014aaca17a5a5a452f47900a3094dc1bb": {
+    "score": 0.016666666666666666,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 1.0
+    }
+  },
+  "fbcb837c31e6a4464264dbfb5e3badb130281ec4": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0
+    }
+  },
+  "19fee517e730ff7e1bffd58c025f0fd755d94a00": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0
+    }
+  },
+  "96e94973e497a269aa90aae145e735edee4e3fac": {
+    "score": 0.016666666666666666,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 1.0
+    }
+  },
+  "392c64fb5cb11086eb1fe13afe87572bebe1d4d7": {
+    "score": 0.016666666666666666,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 1.0
+    }
+  },
+  "cb2ac34b7fde553bea76d7b443f78a47eca224c3": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "empty_patch"
+    }
+  },
+  "5b4997d655a496207e7fe7180cffcc669fc267da": {
+    "score": 0.016666666666666666,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 1.0
+    }
+  },
+  "425647ecc426458c300fc47ef284a82bed324744": {
+    "score": 0.016666666666666666,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 1.0
+    }
+  },
+  "9794b031df78ab844857341c3c7ea3ada2c03d48": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0
+    }
+  },
+  "604da51a5cac49ad15d3201b99ee3d1a5fd6f944": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0
+    }
+  },
+  "fffb110c945d2a66c25d60ba0f9f977ac2158407": {
+    "score": 0.016666666666666666,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 1.0
+    }
+  },
+  "4101f654bef36fd4f62d052420d6f076a7202cbc": {
+    "score": 0.016666666666666666,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 1.0
+    }
+  },
+  "b62873b780c72b15defcc0cef96cd50c2d276870": {
+    "score": 0.016666666666666666,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 1.0
+    }
+  },
+  "99db2d475078d0a780c561a085b65244e56e7101": {
+    "score": 0.016666666666666666,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 1.0
+    }
+  },
+  "8046870295fa1e4afdcb61d9c56a3180089d6301": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "empty_patch"
+    }
+  },
+  "5f6d670b291ad3c28aa4d6d755fc7dbaddb73a48": {
+    "score": 0.016666666666666666,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 1.0
+    }
+  },
+  "04a59244857331d9d734edd7621e118abc79aa76": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0
+    }
+  },
+  "acdd9bdfdb3c64eb100d964f855b06981a8fac0f": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0
+    }
+  },
+  "d258dd6806136285fd0439d46e95febd97590aa7": {
+    "score": 0.016666666666666666,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 1.0
+    }
+  },
+  "1607c56086123b3f11f2ce7fab590b7ef846f980": {
+    "score": 0.016666666666666666,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 1.0
+    }
+  },
+  "c4b0cf45a7b736f0e81e981a6d098ca67e2bd5f9": {
+    "score": 0.016666666666666666,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 1.0
+    }
+  },
+  "9c2d4b7f149b9f8a6cfd00c75b9c88a0006154c4": {
+    "score": 0.016666666666666666,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 1.0
+    }
+  },
+  "1679becc80540a7e7f61116602f907ef4ade760b": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "empty_patch"
+    }
+  },
+  "0f9a56cce8976a024266966ebfa70297883bc7f7": {
+    "score": 0.016666666666666666,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 1.0
+    }
+  },
+  "bff0b17adf04aad526f2830940f2a4c51b4e754a": {
+    "score": 0.016666666666666666,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 1.0
+    }
+  },
+  "d0cc2270cea51172ef14f19ab85668d92b8982d2": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "empty_patch"
+    }
+  },
+  "2786504c63c29baf9aae4f3a7c9e4fd238c89bbe": {
+    "score": 0.016666666666666666,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 1.0
+    }
+  }
+}

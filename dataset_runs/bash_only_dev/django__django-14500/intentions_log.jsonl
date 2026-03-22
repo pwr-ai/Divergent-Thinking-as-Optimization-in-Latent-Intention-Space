@@ -1,0 +1,1 @@
+{"round": 0, "idx": 0, "intention": "“Make sure that squashed migrations are only considered as unapplied if all of the constituent migrations that were squashed are unapplied.”", "key": "61aa7e4838332366b5a4e7482801616350f43abf"}

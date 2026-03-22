@@ -1,0 +1,1 @@
+{"round": 0, "idx": 0, "intention": "Move to a configuration file the handling of the PGPASSWORD variable, since it might require specific settings (like the password itself) to different environments and users.", "key": "3f848a424f3b12af851145a504d52f06773165ed"}

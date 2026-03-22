@@ -1,0 +1,1 @@
+{"round": 0, "idx": 0, "intention": "Change the logic in `simple_tag()` function to allow for any number of keyword-only arguments with defaults.", "key": "a6ca2043eebb26288247da4ff71b218ad5196c41"}

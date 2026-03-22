@@ -1,0 +1,27 @@
+{
+  "799b77e6ab62b28c2889bdcba9f5036c001a6c74": {
+    "score": 1.0160401002506265,
+    "info": {
+      "resolved": false,
+      "f2p": 1.0,
+      "p2p": 0.9624060150375939
+    }
+  },
+  "3497524be6a0369d45d16cfea966fda0ef23c6eb": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0,
+      "note": "empty_patch"
+    }
+  },
+  "b0236d8ecc152d41606ed5b2d8c6ac2d9ee8d6b7": {
+    "score": 1.0166666666666666,
+    "info": {
+      "resolved": true,
+      "f2p": 1.0,
+      "p2p": 1.0
+    }
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "attempts": [
+    {
+      "idx": 0,
+      "patch": "diff --git a/sympy/printing/latex.py b/sympy/printing/latex.py\nindex 8743723ea0..2d8bec1f76 100644\n--- a/sympy/printing/latex.py\n+++ b/sympy/printing/latex.py\n@@ -702,9 +702,8 @@ def _print_Subs(self, subs):\n         latex_old = (self._print(e) for e in old)\n         latex_new = (self._print(e) for e in new)\n         latex_subs = r'\\\\ '.join(\n-            e[0] + '=' + e[1] for e in zip(latex_old, latex_new))\n-        return r'\\left. %s \\right|_{\\substack{ %s }}' % (latex_expr,\n-                                                         latex_subs)\n+            e[0] + \"=\" + e[1] for e in zip(latex_old, latex_new))\n+        return r\"\\left. \\left(%s\\right) \\right|_{\\substack{ %s }}\" % (latex_expr, latex_subs)\n \n     def _print_Integral(self, expr):\n         tex, symbols = \"\", []",
+      "trace": "[assistant]\nTHOUGHT: It seems the sed command didn't work as expected. Let me try a different approach by using a more careful sed command.\n\n```bash\nsed -i '706c\\        return r\"\\\\left. \\\\left(%s\\\\right) \\\\right|_{\\\\substack{ %s }}\" % (latex_expr, latex_subs)' sympy/printing/latex.py\n```\n\n---\n\n[user]\n<returncode>0</returncode>\n<output>\n</output>\n\n---\n\n[assistant]\nTHOUGHT: Let me verify the change.\n\n```bash\nsed -n '706p' sympy/printing/latex.py\n```\n\n---\n\n[user]\n<returncode>0</returncode>\n<output>\n        return r\"\\left. \\left(%s\\right) \\right|_{\\substack{ %s }}\" % (latex_expr, latex_subs)\n</output>\n\n---\n\n[assistant]\nTHOUGHT: Now the change looks correct. Let me test it with the example from the PR description.\n\n```bash\ncd /testbed && python -c \"from sympy import Subs, latex; from sympy.abc import x, y; print(repr(latex(Subs(-x+y, (x,), (1,)))))\"\n```\n\n---\n\n[user]\n<returncode>0</returncode>\n<output>\n'\\\\left. \\\\left(- x + y\\\\right) \\\\right|_{\\\\substack{ x=1 }}'\n</output>\n\n---\n\n[assistant]\nTHOUGHT: Perfect! The output now matches the desired format from the PR description. Let me also test the simple case to make sure it still works.\n\n```bash\ncd /testbed && python -c \"from sympy import Subs, latex; from sympy.abc import x, y; print(repr(latex(Subs(x*y, (x, y), (1, 2)))))\"\n```\n\n---\n\n[user]\n<returncode>0</returncode>\n<output>\n'\\\\left. \\\\left(x y\\\\right) \\\\right|_{\\\\substack{ x=1\\\\\\\\ y=2 }}'\n</output>\n\n---\n\n[assistant]\nTHOUGHT: Both cases now have the outer parentheses, which is what the PR description requested. The fix is working as expected.\n\nLet me now submit the solution.\n\n```bash\necho COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT && git add -A && git diff --cached\n```\n\n---\n\n[user]\ndiff --git a/sympy/printing/latex.py b/sympy/printing/latex.py\nindex 8743723ea0..2d8bec1f76 100644\n--- a/sympy/printing/latex.py\n+++ b/sympy/printing/latex.py\n@@ -702,9 +702,8 @@ def _print_Subs(self, subs):\n         latex_old = (self._print(e) for e in old)\n         latex_new = (self._print(e) for e in new)\n         latex_subs = r'\\\\ '.join(\n-            e[0] + '=' + e[1] for e in zip(latex_old, latex_new))\n-        return r'\\left. %s \\right|_{\\substack{ %s }}' % (latex_expr,\n-                                                         latex_subs)\n+            e[0] + \"=\" + e[1] for e in zip(latex_old, latex_new))\n+        return r\"\\left. \\left(%s\\right) \\right|_{\\substack{ %s }}\" % (latex_expr, latex_subs)\n \n     def _print_Integral(self, expr):\n         tex, symbols = \"\", []\n",
+      "temperature": 0.3,
+      "score": 1.0166666666666666,
+      "info": {
+        "resolved": true,
+        "f2p": 1.0,
+        "p2p": 1.0
+      }
+    }
+  ],
+  "anchors": [
+    {
+      "text": "The fix aims to correct the LaTeX printing of the `Subs` class in SymPy by adding outer parentheses around the expression. This is done by modifying the `_print_Subs` method in the `latex.py` file to wrap the expression in an additional set of parentheses before applying the substitution.",
+      "score": 1.0166666666666666,
+      "info": {
+        "resolved": true,
+        "f2p": 1.0,
+        "p2p": 1.0
+      },
+      "from_attempt": 0
+    },
+    {
+      "text": "Add input validation and error handling to prevent edge cases.",
+      "score": 0.5,
+      "info": {
+        "resolved": false,
+        "f2p": 0.0,
+        "p2p": 0.0,
+        "note": "hardcoded_diversity_anchor"
+      },
+      "from_attempt": "hardcoded_0"
+    },
+    {
+      "text": "Refactor code structure to improve maintainability and fix logic flow.",
+      "score": 0.5,
+      "info": {
+        "resolved": false,
+        "f2p": 0.0,
+        "p2p": 0.0,
+        "note": "hardcoded_diversity_anchor"
+      },
+      "from_attempt": "hardcoded_1"
+    }
+  ],
+  "solved_in_bootstrap": true
+}

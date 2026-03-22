@@ -1,0 +1,106 @@
+{
+  "786b89f82871717b643bd4cb8e0598b1d584c3d3": {
+    "score": 0.014689265536723164,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.8813559322033898
+    }
+  },
+  "97eb5c95e668431f1e6127ecba33019a5263d71f": {
+    "score": 1.015819209039548,
+    "info": {
+      "resolved": false,
+      "f2p": 1.0,
+      "p2p": 0.9491525423728814
+    }
+  },
+  "af7b3176c2ac075f4d0e7bc046f66a6cc663e8a3": {
+    "score": 0.016666666666666666,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 1.0
+    }
+  },
+  "b5dde6485cb4d2e71cba3c44b464f7dbc5158799": {
+    "score": 0.016666666666666666,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 1.0
+    }
+  },
+  "243fa655adbe1788aca9941b1117007fbaf28a55": {
+    "score": 1.015819209039548,
+    "info": {
+      "resolved": false,
+      "f2p": 1.0,
+      "p2p": 0.9491525423728814
+    }
+  },
+  "a00bc45e7d9507d0edb4f5f66b4bf6d2c9e13e0c": {
+    "score": 1.015819209039548,
+    "info": {
+      "resolved": false,
+      "f2p": 1.0,
+      "p2p": 0.9491525423728814
+    }
+  },
+  "5211a91a655823eb42fc55f194f727eb6e7ba6ae": {
+    "score": 1.015819209039548,
+    "info": {
+      "resolved": false,
+      "f2p": 1.0,
+      "p2p": 0.9491525423728814
+    }
+  },
+  "6746ece02e7b6b370523f8827c2f5f2d8e68bd22": {
+    "score": 0.0,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.0
+    }
+  },
+  "599ef92f116f80bcbba62cb945e6cb044a5caf12": {
+    "score": 1.015819209039548,
+    "info": {
+      "resolved": false,
+      "f2p": 1.0,
+      "p2p": 0.9491525423728814
+    }
+  },
+  "9546e42c1db1e5ab91ab6b084b3ec7c5fb506962": {
+    "score": 1.015819209039548,
+    "info": {
+      "resolved": false,
+      "f2p": 1.0,
+      "p2p": 0.9491525423728814
+    }
+  },
+  "ff313a82ca18d3d83c4d4b62e43db2eae5e94711": {
+    "score": 1.015819209039548,
+    "info": {
+      "resolved": false,
+      "f2p": 1.0,
+      "p2p": 0.9491525423728814
+    }
+  },
+  "3df435feedd4d3d80a618a6a8d5d097448862a14": {
+    "score": 0.014971751412429379,
+    "info": {
+      "resolved": false,
+      "f2p": 0.0,
+      "p2p": 0.8983050847457628
+    }
+  },
+  "e0c1d1dc6084ca528232dfb80135153a8968f136": {
+    "score": 1.0166666666666666,
+    "info": {
+      "resolved": true,
+      "f2p": 1.0,
+      "p2p": 1.0
+    }
+  }
+}

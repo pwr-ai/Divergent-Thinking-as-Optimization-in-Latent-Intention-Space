@@ -1,0 +1,1 @@
+{"round": 0, "idx": 0, "intention": "Reverse the order of coercing input to iterable and then to tuple, so that ORM fields are not broken.", "key": "feee539e99c17025cf824c0b8c31190f10f3ca6e"}

@@ -1,0 +1,1 @@
+{"instance_id": "sphinx-doc__sphinx-9658", "model_name_or_path": "csc+mini", "model_patch": "The fix involves finding the class definition that inherits from 'torch.nn' and changing it to inherit from 'torch.nn.Module' explicitly. This will ensure that Sphinx documents the base class correctly as 'torch.nn.Module' instead of 'torch.nn.'\n"}

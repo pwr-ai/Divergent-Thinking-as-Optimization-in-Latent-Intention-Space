@@ -1,0 +1,6 @@
+{"round": 0, "idx": 0, "intention": "Change Django to consider 'model' instead of 'creation_counter' when comparing Django Fields for equality.", "key": "4e44ee436a77dadee4789784f6f7de22253b29f8"}
+{"round": 1, "idx": 0, "intention": "The abstract field should be compared based on (the class itself AND its name).", "key": "92eb390beb95da8b64ea78c9d1dd93a7de77e571"}
+{"round": 2, "idx": 0, "intention": "Abstract model fields of differing models should not compare as equal. Hence, change Django’s abstract field comparison mechanism to consider the model when comparing equality.", "key": "f623a48efa3742fa7b733e56a01f7e21d07c378d"}
+{"round": 3, "idx": 0, "intention": "Modify the ‘__eq__’ method of ‘django.db.models.base.ModelBase’ing abstract and non-abstract models with different class names to compare unequally in order to prevent a) their equal comparison and b) to maintain current ordering.", "key": "5d63f718298385ff2c3b56a8bfaea7dbb6663085"}
+{"round": 4, "idx": 0, "intention": "Create new abstract fields with unique hashes within each abstract model.", "key": "0be2613f142684854594763bf12d09e3446beee3"}
+{"round": 5, "idx": 0, "intention": "Modify abstract field's __eq__, __hash__, __lt__ methods to take model inheritance into consideration when comparing among fields.", "key": "29f05a62663dccccb40926c5d9a8335f8c1f9539"}

@@ -1,0 +1,1 @@
+{"round": 0, "idx": 0, "intention": "Update the cache.backends.db._cull method so that before calling the delete SQL query, it checks if the result returned by the SQL command to obtain the least recently used entry has any data.", "key": "8336cf6b3071ae4e8650e738486c6b8cc19fa99c"}
