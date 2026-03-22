@@ -76,10 +76,10 @@ unresolved_runs = [
 
 combined_runs = intent_solved_runs + unresolved_runs
 rng = random.Random(42)
-k = min(30, len(combined_runs))
+k = min(50, len(combined_runs))
 sampled = rng.sample(combined_runs, k) if k > 0 else []
 
-out_sample_file = base_dir.parent / "sample_30.json"
+out_sample_file = base_dir.parent / "sample_50.json"
 with open(out_sample_file, "w", encoding="utf-8") as f:
     json.dump(sampled, f, indent=2, ensure_ascii=False)
 
